@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TeamPulse — Meeting Intelligence for the Terminal</title>
+  <meta name="description" content="TeamPulse reads your meeting transcripts and extracts decisions, tasks, risks, and owners using Gemini AI — right in your terminal. Tracks drift across meetings so nothing slips." />
+  <meta property="og:title" content="TeamPulse — Meeting Intelligence for the Terminal" />
+  <meta property="og:description" content="Stop re-discussing. Start shipping. TeamPulse keeps every decision, task, and risk in check." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #FDF8F3;
+      --surface:   #F5EDE0;
+      --surface2:  #EDE0CE;
+      --border:    #DCC8A8;
+      --orange:    #D94A14;
+      --orange-2:  #F06030;
+      --orange-dim:#FDEADE;
+      --brown:     #8B5A35;
+      --text:      #1A0E08;
+      --text-dim:  #7A5542;
+      --text-muted:#B89070;
+      --term-bg:   #0C0806;
+      --term-surf: #161008;
+      --term-surf2:#1E160A;
+      --term-bdr:  #3A2A1A;
+      --term-text: #F0E0C8;
+      --term-muted:#5A4030;
+      --green:     #5A8830;
+      --red:       #C83010;
+      --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --radius:    10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--orange); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Nav ─────────────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem; height: 58px;
+      background: rgba(253,248,243,.93);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex; align-items: center; gap: .55rem;
+      font-family: var(--font-mono); font-weight: 700;
+      font-size: .95rem; color: var(--text);
+      letter-spacing: -.4px;
+    }
+    .nav-logo strong { color: var(--orange); }
+
+    .nav-links {
+      display: flex; align-items: center; gap: 2rem; list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-dim); font-size: .875rem;
+      font-weight: 500; transition: color .15s;
+    }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: .45rem;
+      padding: .5rem 1.1rem; border-radius: 7px;
+      font-size: .875rem; font-weight: 600;
+      cursor: pointer; transition: all .15s; border: none;
+      text-decoration: none !important; white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: var(--orange); color: #fff; box-shadow: 0 2px 12px rgba(217,74,20,.3); }
+    .btn-primary:hover { background: var(--orange-2); }
+    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-outline:hover { border-color: var(--text-dim); }
+    .btn-sm { padding: .35rem .8rem; font-size: .8rem; }
+
+    /* ── Hero split ──────────────────────────────────────────────────────────── */
+    .hero-wrap {
+      max-width: 1200px; margin: 0 auto;
+      padding: 5rem 2.5rem 2rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem; align-items: center;
+    }
+
+    .hero-left { max-width: 520px; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .28rem .75rem;
+      background: var(--orange-dim); border: 1px solid rgba(217,74,20,.35);
+      border-radius: 100px; font-size: .72rem; font-weight: 700;
+      color: var(--orange); letter-spacing: .4px;
+      text-transform: uppercase; margin-bottom: 1.75rem;
+    }
+
+    .hero-left h1 {
+      font-size: clamp(2.4rem, 5vw, 3.5rem);
+      font-weight: 900;
+      line-height: 1.06;
+      letter-spacing: -2px;
+      margin-bottom: 1.25rem;
+      color: var(--text);
+    }
+    .hero-left h1 em {
+      font-style: normal;
+      color: var(--orange);
+    }
+
+    .hero-left p {
+      font-size: 1.05rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+      margin-bottom: 2rem;
+      max-width: 440px;
+    }
+
+    .hero-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+
+    .hero-note {
+      margin-top: 1.5rem;
+      font-size: .78rem;
+      color: var(--text-muted);
+      display: flex; align-items: center; gap: .4rem;
+    }
+
+    /* ── Terminal ─────────────────────────────────────────────────────────────── */
+    .terminal {
+      background: var(--term-bg);
+      border: 1px solid var(--term-bdr);
+      border-radius: 13px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04);
+    }
+
+    .terminal-bar {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .7rem 1rem;
+      background: var(--term-surf);
+      border-bottom: 1px solid var(--term-bdr);
+    }
+
+    .dot { width: 11px; height: 11px; border-radius: 50%; }
+    .dot-red { background: #ff5f57; }
+    .dot-yellow { background: #febc2e; }
+    .dot-green { background: #28c840; }
+
+    .terminal-title {
+      flex: 1; text-align: center;
+      font-size: .72rem; color: var(--term-muted);
+      font-family: var(--font-mono);
+    }
+
+    .tab-bar {
+      display: flex; border-bottom: 1px solid var(--term-bdr);
+      padding: 0 .75rem; background: var(--term-surf2);
+    }
+    .tab {
+      padding: .45rem .85rem; font-size: .72rem;
+      font-family: var(--font-mono); color: var(--term-muted);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s; user-select: none;
+    }
+    .tab.active { color: var(--orange-2); border-color: var(--orange-2); }
+
+    .terminal-body {
+      padding: 1.1rem 1.4rem;
+      font-family: var(--font-mono); font-size: .78rem;
+      line-height: 1.7; overflow-x: auto;
+      color: var(--term-text); min-height: 260px;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .t-prompt { color: var(--orange-2); }
+    .t-cmd { color: var(--term-text); }
+    .t-dim { color: var(--term-muted); }
+    .t-green { color: #7ab84a; }
+    .t-yellow { color: #c4883a; }
+    .t-red { color: #d84a2a; }
+    .t-cyan { color: #e08030; }
+    .t-bold { font-weight: 700; }
+
+    /* ── Stats strip ─────────────────────────────────────────────────────────── */
+    .stats-strip {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      padding: 1.25rem 2.5rem;
+    }
+    .stats-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; justify-content: center;
+      gap: 3rem; flex-wrap: wrap;
+    }
+    .stat-item {
+      display: flex; flex-direction: column;
+      align-items: center; gap: .15rem;
+    }
+    .stat-num {
+      font-size: 1.5rem; font-weight: 900;
+      letter-spacing: -1px; color: var(--text);
+    }
+    .stat-label {
+      font-size: .72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .8px;
+      color: var(--text-muted);
+    }
+
+    /* ── Sections ────────────────────────────────────────────────────────────── */
+    .section {
+      max-width: 1200px; margin: 0 auto;
+      padding: 6rem 2.5rem;
+    }
+    .section-eyebrow {
+      font-size: .72rem; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--orange); margin-bottom: .75rem;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 900; letter-spacing: -1.2px;
+      line-height: 1.1; margin-bottom: 1rem;
+    }
+    .section-sub {
+      color: var(--text-dim); max-width: 500px;
+      font-size: 1rem; line-height: 1.65;
+    }
+
+    /* ── Features ────────────────────────────────────────────────────────────── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      margin-top: 4rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--border);
+    }
+    .feature-card {
+      background: var(--bg);
+      padding: 2rem 1.75rem;
+      transition: background .2s;
+    }
+    .feature-card:hover { background: var(--surface); }
+    .feature-icon {
+      width: 40px; height: 40px;
+      background: var(--orange-dim);
+      border: 1px solid rgba(217,74,20,.2);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1rem;
+      color: var(--orange);
+    }
+    .feature-icon svg { width: 18px; height: 18px; }
+    .feature-card h3 {
+      font-size: .95rem; font-weight: 700;
+      margin-bottom: .4rem; color: var(--text);
+    }
+    .feature-card p {
+      font-size: .85rem; color: var(--text-dim); line-height: 1.6;
+    }
+
+    /* ── Commands ────────────────────────────────────────────────────────────── */
+    .commands-section {
+      background: var(--term-bg);
+      border-top: 1px solid var(--term-bdr);
+      border-bottom: 1px solid var(--term-bdr);
+      color: var(--term-text);
+    }
+    .commands-inner {
+      max-width: 1200px; margin: 0 auto;
+      padding: 6rem 2.5rem;
+    }
+    .commands-inner .section-eyebrow { color: var(--orange-2); }
+    .commands-inner .section-title { color: var(--term-text); }
+    .commands-inner .section-sub { color: var(--term-muted); }
+
+    .commands-list {
+      margin-top: 3rem;
+      display: flex; flex-direction: column;
+      gap: 0; border: 1px solid var(--term-bdr);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .cmd-row {
+      display: grid; grid-template-columns: 260px 1fr;
+      gap: 2rem; padding: 1.4rem 1.75rem;
+      border-bottom: 1px solid var(--term-bdr);
+      transition: background .15s;
+      align-items: start;
+    }
+    .cmd-row:last-child { border-bottom: none; }
+    .cmd-row:hover { background: var(--term-surf); }
+    .cmd-mono {
+      font-family: var(--font-mono); font-size: .82rem;
+      color: var(--orange-2); line-height: 1.5;
+    }
+    .cmd-mono span { color: var(--term-muted); }
+    .cmd-desc h4 {
+      font-size: .9rem; font-weight: 700;
+      color: var(--term-text); margin-bottom: .3rem;
+    }
+    .cmd-desc p { font-size: .83rem; color: var(--term-muted); line-height: 1.55; }
+
+    /* ── Install ──────────────────────────────────────────────────────────────── */
+    .install-section {
+      max-width: 1200px; margin: 0 auto;
+      padding: 6rem 2.5rem;
+    }
+    .install-steps {
+      display: flex; flex-direction: column;
+      gap: 1.25rem; margin-top: 3rem; max-width: 780px;
+    }
+    .install-step {
+      display: flex; gap: 1.25rem; align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0; width: 30px; height: 30px;
+      border-radius: 50%; background: var(--orange-dim);
+      border: 1.5px solid var(--orange); color: var(--orange);
+      font-weight: 700; font-size: .8rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-content h3 {
+      font-size: .9rem; font-weight: 700;
+      margin-bottom: .3rem; color: var(--text);
+    }
+    .step-content p { font-size: .85rem; color: var(--text-dim); }
+
+    .code-block {
+      background: var(--term-bg);
+      border: 1px solid var(--term-bdr);
+      border-radius: 8px;
+      padding: .8rem 1rem;
+      margin-top: .6rem;
+      font-family: var(--font-mono);
+      font-size: .8rem;
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 1rem;
+    }
+    .code-block .cmd-text { color: var(--term-text); }
+
+    .copy-btn {
+      background: var(--term-surf);
+      border: 1px solid var(--term-bdr);
+      color: var(--term-muted);
+      padding: .28rem .6rem;
+      border-radius: 5px; font-size: .72rem;
+      cursor: pointer; transition: color .15s, border-color .15s;
+      font-family: var(--font-mono); flex-shrink: 0;
+    }
+    .copy-btn:hover { color: var(--term-text); border-color: var(--orange-2); }
+
+    .install-note {
+      margin-top: 2rem; padding: 1.25rem 1.5rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); max-width: 780px;
+    }
+    .install-note p { font-size: .85rem; color: var(--text-dim); margin-bottom: .6rem; }
+    .install-note strong { color: var(--text); }
+
+    /* ── CTA / footer strip ──────────────────────────────────────────────────── */
+    .cta-section {
+      background: var(--term-bg);
+      border-top: 1px solid var(--term-bdr);
+      text-align: center;
+      padding: 5rem 2rem;
+    }
+    .cta-section h2 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 900; letter-spacing: -1px;
+      color: var(--term-text); margin-bottom: .75rem;
+    }
+    .cta-section p {
+      color: var(--term-muted); font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+    .cta-actions { display: flex; justify-content: center; gap: .75rem; flex-wrap: wrap; }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 2.5rem;
+      display: flex; align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap; gap: .75rem;
+      font-size: .8rem; color: var(--text-muted);
+    }
+    footer a { color: var(--text-dim); }
+    footer a:hover { color: var(--orange); text-decoration: none; }
+    .footer-links { display: flex; gap: 1.25rem; }
+
+    /* ── Divider ──────────────────────────────────────────────────────────────── */
+    hr { border: none; border-top: 1px solid var(--border); }
+
+    /* ── Responsive ──────────────────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero-wrap { grid-template-columns: 1fr; gap: 3rem; padding: 3.5rem 1.5rem 1.5rem; }
+      .hero-left { max-width: 100%; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      nav { padding: 0 1.5rem; }
+      .stats-inner { gap: 1.75rem; }
+    }
+    @media (max-width: 640px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .nav-links li:not(:last-child) { display: none; }
+      .commands-inner { padding: 4rem 1.5rem; }
+      .install-section { padding: 4rem 1.5rem; }
+      .cmd-row { grid-template-columns: 1fr; gap: .5rem; }
+      footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ──────────────────────────────────────────────────────────────────── -->
+<nav>
+  <div class="nav-logo">
+    <!-- Red panda icon — single color -->
+<strong>Team</strong>Pulse
+  </div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#commands">Commands</a></li>
+    <li><a href="#install">Install</a></li>
+    <li>
+      <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-outline btn-sm" target="_blank" rel="noopener">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        GitHub
+      </a>
+    </li>
+  </ul>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+<div class="hero-wrap">
+  <div class="hero-left">
+    <div class="badge">Open source · MIT · Gemini 2.0 Flash</div>
+    <h1>Stop re‑discussing.<br/><em>Start shipping.</em></h1>
+    <p>
+      TeamPulse reads your meeting transcripts and surfaces every decision, task,
+      and risk — then tracks drift across meetings so nothing slips through the cracks.
+    </p>
+    <div class="hero-actions">
+      <a href="#install" class="btn btn-primary">Get started free</a>
+      <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-outline" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <p class="hero-note">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="6" r="6"/></svg>
+      Node.js 18+ · Works on macOS, Linux, Windows
+    </p>
+  </div>
+
+  <div>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+        <div class="terminal-title">teampulse — zsh</div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab(0)">analyze</div>
+        <div class="tab" onclick="switchTab(1)">drift</div>
+        <div class="tab" onclick="switchTab(2)">watchdog</div>
+        <div class="tab" onclick="switchTab(3)">chat</div>
+      </div>
+
+      <div class="terminal-body tab-panel active" id="panel-0">
+        <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse analyze sprint-review.txt --skill product-manager</span></div>
+        <div class="t-dim">  › Analyzing sprint-review.txt...</div>
+        <div class="t-green">  ✓ Analysis complete  ·  id: sprint-review-lx7k2</div>
+        <br/>
+        <div class="t-bold t-cyan">  ── Summary ──</div>
+        <div>  Auth migrated to Passport.js after a blocking bug. Mobile beta</div>
+        <div>  slipped from June 3rd → June 10th. 14/17 story points shipped.</div>
+        <br/>
+        <div class="t-cyan">  ── Decisions (4) ──</div>
+        <div>  <span class="t-bold">1.</span> Migrate auth to Passport.js — <span class="t-dim">Priya Patel</span> · <span class="t-yellow">pending</span></div>
+        <div>  <span class="t-bold">2.</span> Push mobile beta to June 10th — <span class="t-dim">All</span> · <span class="t-green">open</span></div>
+        <br/>
+        <div class="t-yellow">  ── Tasks (7) ──</div>
+        <div>  ○ Fix LINEAR-847 transaction bug — <span class="t-bold">Priya</span> [<span class="t-red">high</span>]</div>
+        <div>  ○ Lazy load product images — <span class="t-bold">Alex</span> [<span class="t-yellow">medium</span>]</div>
+        <div>  ○ Write marketing impact summary — <span class="t-bold">Marcus</span> [<span class="t-yellow">medium</span>]</div>
+        <br/>
+        <div class="t-dim">  Run <span class="t-cyan">teampulse chat</span> to explore interactively.</div>
+      </div>
+
+      <div class="terminal-body tab-panel" id="panel-1">
+        <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse drift --last 2</span></div>
+        <div class="t-green">  ✓ Drift analysis complete</div>
+        <div class="t-dim">  Comparing: Sprint Week 5 → Sprint Week 6</div>
+        <br/>
+        <div>  <span class="t-bold">Overall Drift Score:</span> <span class="t-yellow t-bold">42/100</span> <span class="t-dim">(moderate drift)</span></div>
+        <br/>
+        <div class="t-dim">  ┌──────────────────────┬────────────┬─────────────┬───────┐</div>
+        <div class="t-dim">  │ <span class="t-cyan">Topic</span>                │ <span class="t-cyan">Week 5</span>     │ <span class="t-cyan">Week 6</span>      │ <span class="t-cyan">Score</span> │</div>
+        <div class="t-dim">  ├──────────────────────┼────────────┼─────────────┼───────┤</div>
+        <div class="t-dim">  │ Auth migration       │ proposed   │ <span class="t-green">decided ✓</span>  │ <span class="t-green">10</span>    │</div>
+        <div class="t-dim">  │ QA automation        │ discussed  │ discussed   │ <span class="t-yellow">60</span>    │</div>
+        <div class="t-dim">  │ Mobile beta date     │ June 3rd   │ <span class="t-red">June 10th</span>  │ <span class="t-red">75</span>    │</div>
+        <div class="t-dim">  └──────────────────────┴────────────┴─────────────┴───────┘</div>
+        <br/>
+        <div class="t-red">  [HIGH] QA coverage gap — unassigned across both meetings</div>
+      </div>
+
+      <div class="terminal-body tab-panel" id="panel-2">
+        <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse watchdog</span></div>
+        <div class="t-green">  ✓ Watchdog scan complete  ·  8 meetings</div>
+        <br/>
+        <div>  <span class="t-bold">Team Health Score:</span> <span class="t-yellow t-bold">58/100</span> <span class="t-dim">(needs attention)</span></div>
+        <br/>
+        <div class="t-yellow">  ── Top Priorities ──</div>
+        <div>  1. Assign owner to QA automation initiative</div>
+        <div>  2. Conduct payment flow security audit (LINEAR-847 pattern)</div>
+        <div>  3. Redistribute tasks from Priya — 9 items, 6 meetings</div>
+        <br/>
+        <div class="t-red">  ── Unresolved Risks ──</div>
+        <div>  <span class="t-red">[HIGH]</span> Undetected financial data bugs in payment flow</div>
+        <div>     <span class="t-dim">Owner: <span class="t-red">⚠ none</span>  ·  Seen in 3 meetings</span></div>
+        <div>  <span class="t-yellow">[MEDIUM]</span> Auth migration timeline has no buffer</div>
+        <div>     <span class="t-dim">Owner: Priya Patel  ·  Seen in 2 meetings</span></div>
+      </div>
+
+      <div class="terminal-body tab-panel" id="panel-3">
+        <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse chat</span></div>
+        <div class="t-dim">  │ Ask anything about your meeting history.</div>
+        <div class="t-dim">  │ Type /help for commands, Ctrl+C to exit.</div>
+        <br/>
+        <div><span class="t-cyan">  you</span><span class="t-dim"> › </span>who has the most open tasks?</div>
+        <br/>
+        <div>  Based on your last 5 meetings:</div>
+        <br/>
+        <div>  • <span class="t-bold">Priya Patel</span> — 5 open tasks</div>
+        <div>    auth migration, LINEAR-847, email templates, payment audit</div>
+        <div>  • <span class="t-bold">Alex Thompson</span> — 3 open tasks</div>
+        <div>  • <span class="t-bold">Marcus Rivera</span> — 2 open tasks</div>
+        <br/>
+        <div>  <span class="t-red">⚠</span> Priya is overloaded. Consider redistributing the</div>
+        <div>  payment audit task before next sprint.</div>
+        <br/>
+        <div><span class="t-cyan">  you</span><span class="t-dim"> › </span><span style="border-right:2px solid #D94A14;padding-right:2px">_</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Stats strip ────────────────────────────────────────────────────────────── -->
+<div class="stats-strip">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-num">6</div>
+      <div class="stat-label">CLI Commands</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">4</div>
+      <div class="stat-label">AI Roles</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">&lt;30s</div>
+      <div class="stat-label">Per Analysis</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">0</div>
+      <div class="stat-label">Dashboards</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">MIT</div>
+      <div class="stat-label">License</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Features ───────────────────────────────────────────────────────────────── -->
+<section class="section" id="features">
+  <div class="section-eyebrow">Features</div>
+  <h2 class="section-title">Built for teams that ship.</h2>
+  <p class="section-sub">No dashboards. No browser tab. No SaaS subscription. Just your terminal and your meeting transcripts.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <rect x="2" y="3" width="14" height="12" rx="2"/>
+          <path d="M6 7h6M6 10h4"/>
+        </svg>
+      </div>
+      <h3>Structured extraction</h3>
+      <p>Decisions with owners, tasks with priorities, risks with mitigations, open questions — all parsed from plain text using Gemini 2.0 Flash.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M3 9h5l2-5 2 8 2-3h1"/>
+        </svg>
+      </div>
+      <h3>Decision drift detection</h3>
+      <p>Compare any two meetings and see a scored diff of every decision and task. Know exactly what regressed, what's recurring, and who didn't follow through.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="9" cy="9" r="6"/>
+          <path d="M9 6v4l2.5 1.5"/>
+        </svg>
+      </div>
+      <h3>Watchdog monitor</h3>
+      <p>Scan your entire meeting history for risks with no owners, tasks that keep recurring without resolution, and overloaded team members.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M14 9c0 2.76-2.24 5-5 5a5 5 0 01-4.58-3H2l2-2-2-2h2.42A5 5 0 019 4c2.76 0 5 2.24 5 5z"/>
+        </svg>
+      </div>
+      <h3>Conversational REPL</h3>
+      <p>Chat with your meeting history using natural language. Ask about owners, blockers, or patterns — Gemini maintains full context across every analyzed meeting.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="9" cy="6" r="2.5"/>
+          <path d="M4 15c0-2.76 2.24-4 5-4s5 1.24 5 4"/>
+          <circle cx="13.5" cy="5" r="1.5" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <h3>Role-based analysis</h3>
+      <p>Analyze the same transcript through four lenses: Product Manager, Developer, Founder, or Marketing. Each surfaces what matters most to that role.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M5 4h8a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/>
+          <path d="M9 12v3M7 15h4"/>
+        </svg>
+      </div>
+      <h3>Markdown &amp; JSON export</h3>
+      <p>Output rich Markdown with YAML frontmatter, GitHub-style checkboxes, priority grouping, and unassigned-task warnings. Ready for Notion, GitHub, or Obsidian.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Commands ───────────────────────────────────────────────────────────────── -->
+<div class="commands-section" id="commands">
+  <div class="commands-inner">
+    <div class="section-eyebrow">Commands</div>
+    <h2 class="section-title">Six commands. One workflow.</h2>
+    <p class="section-sub">Composable, scriptable, and exit-code safe — fits any CI or automation pipeline.</p>
+
+    <div class="commands-list">
+      <div class="cmd-row">
+        <div class="cmd-mono">teampulse analyze <span>&lt;file&gt;</span></div>
+        <div class="cmd-desc">
+          <h4>Analyze a transcript</h4>
+          <p>Read any <code style="color:var(--orange-2);font-family:var(--font-mono)">.txt</code> file and extract structured intelligence. Supports <code style="color:var(--orange-2);font-family:var(--font-mono)">--skill</code>, <code style="color:var(--orange-2);font-family:var(--font-mono)">--format json|markdown</code>, and <code style="color:var(--orange-2);font-family:var(--font-mono)">--output</code>.</p>
+        </div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-mono">teampulse drift <span>[idA] [idB]</span></div>
+        <div class="cmd-desc">
+          <h4>Detect decision drift</h4>
+          <p>Compare two meetings side-by-side with a drift score per item. Use <code style="color:var(--orange-2);font-family:var(--font-mono)">--last 2</code> to auto-select the two most recent.</p>
+        </div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-mono">teampulse watchdog</div>
+        <div class="cmd-desc">
+          <h4>Scan for recurring risks</h4>
+          <p>Full history scan for unresolved risks, ownerless tasks, and overloaded participants. Filter by team with <code style="color:var(--orange-2);font-family:var(--font-mono)">--team</code>.</p>
+        </div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-mono">teampulse chat</div>
+        <div class="cmd-desc">
+          <h4>Interactive REPL</h4>
+          <p>Conversational interface over your full meeting history. Slash-command support: <code style="color:var(--orange-2);font-family:var(--font-mono)">/meetings</code>, <code style="color:var(--orange-2);font-family:var(--font-mono)">/use &lt;id&gt;</code>, <code style="color:var(--orange-2);font-family:var(--font-mono)">/clear</code>.</p>
+        </div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-mono">teampulse history</div>
+        <div class="cmd-desc">
+          <h4>Browse past meetings</h4>
+          <p>Table view of all stored meetings with decision, task, and risk counts. Unassigned tasks highlighted.</p>
+        </div>
+      </div>
+      <div class="cmd-row">
+        <div class="cmd-mono">teampulse init</div>
+        <div class="cmd-desc">
+          <h4>Setup wizard</h4>
+          <p>Guided interactive setup — API key, default skill, team name. Writes your <code style="color:var(--orange-2);font-family:var(--font-mono)">.env</code> automatically.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Install ────────────────────────────────────────────────────────────────── -->
+<section class="install-section" id="install">
+  <div class="section-eyebrow">Get started</div>
+  <h2 class="section-title">Up and running in 3 steps</h2>
+  <p class="section-sub">Requires Node.js 18+ and a free Gemini API key from Google AI Studio.</p>
+
+  <div class="install-steps">
+    <div class="install-step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Clone the repository</h3>
+        <p>Pull the source directly from GitHub.</p>
+        <div class="code-block">
+          <span class="cmd-text">git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git && cd teampulse</span>
+          <button class="copy-btn" onclick="copy(this, 'git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git && cd teampulse')">copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Install &amp; configure</h3>
+        <p>Install dependencies, then run the setup wizard to add your Gemini API key.</p>
+        <div class="code-block">
+          <span class="cmd-text">npm install && node src/index.js init</span>
+          <button class="copy-btn" onclick="copy(this, 'npm install && node src/index.js init')">copy</button>
+        </div>
+        <p style="margin-top:.5rem;font-size:.8rem;color:var(--text-muted)">
+          Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--orange)">aistudio.google.com/app/apikey</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Analyze your first meeting</h3>
+        <p>Point TeamPulse at any <code style="font-family:var(--font-mono);color:var(--orange);font-size:.85em">.txt</code> transcript — Google Meet, Otter, or Fireflies all work.</p>
+        <div class="code-block">
+          <span class="cmd-text">node src/index.js analyze data/sample-meeting.txt --skill product-manager</span>
+          <button class="copy-btn" onclick="copy(this, 'node src/index.js analyze data/sample-meeting.txt --skill product-manager')">copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="install-note">
+    <p><strong>Optional:</strong> install globally to use <code style="font-family:var(--font-mono);font-size:.9em;color:var(--orange)">teampulse</code> from any directory</p>
+    <div class="code-block">
+      <span class="cmd-text">npm install -g . && teampulse --help</span>
+      <button class="copy-btn" onclick="copy(this, 'npm install -g . && teampulse --help')">copy</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ────────────────────────────────────────────────────────────────────── -->
+<div class="cta-section">
+  <!-- Large red panda icon -->
+<h2>Your next meeting is already losing information.</h2>
+  <p>TeamPulse captures it all — decisions, owners, drift — in under 30 seconds.</p>
+  <div class="cta-actions">
+    <a href="#install" class="btn btn-primary">Get started free</a>
+    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-outline" style="color:#F0E0C8;border-color:#3A2A1A" target="_blank" rel="noopener">Star on GitHub</a>
+  </div>
+</div>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────────── -->
+<footer>
+  <div style="display:flex;align-items:center;gap:.5rem">
+<span><strong style="color:var(--text)">TeamPulse</strong> — MIT License</span>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Gemini API</a>
+    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse/issues" target="_blank" rel="noopener">Issues</a>
+  </div>
+</footer>
+
+<script>
+  function switchTab(i) {
+    document.querySelectorAll('.tab').forEach((t, j) => t.classList.toggle('active', i === j));
+    document.querySelectorAll('.tab-panel').forEach((p, j) => p.classList.toggle('active', i === j));
+  }
+  function copy(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'copied!';
+      btn.style.color = '#7ab84a';
+      btn.style.borderColor = '#7ab84a';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 1800);
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+Sprint Review — Q2 Week 6
+Date: 2026-05-19
+Attendees: Sarah Chen (PM), Marcus Rivera (Lead Engineer), Priya Patel (Backend Dev), Alex Thompson (Frontend Dev), Jordan Kim (QA)
+
+---
+
+Sarah Chen: Alright everyone, let's get started. We have about 45 minutes. Marcus, can you kick us off with the engineering summary?
+
+Marcus Rivera: Sure. So this sprint we completed 14 of the 17 planned story points. The three we didn't finish were all related to the new authentication service. We hit a wall with the OAuth2 integration — turns out the third-party library we chose has a critical bug when handling token refresh on mobile clients.
+
+Priya Patel: Yeah, I spent two days debugging that. I've filed an issue upstream but there's no ETA on a fix. My recommendation is we either fork the library or switch to Passport.js. I lean toward Passport because it's more mature, but it'll require refactoring the existing auth middleware.
+
+Sarah Chen: How long is that refactor looking like?
+
+Priya Patel: Honestly, best case three days, worst case a week if there are more surprises hiding in the session management code.
+
+Marcus Rivera: I agree we should switch. The current library is a dead end. Let's make that decision now — do we go with Passport.js?
+
+Sarah Chen: I'm aligned. Let's decide: we're migrating to Passport.js for auth. Priya, you'll own that. What does that do to the mobile launch timeline?
+
+Marcus Rivera: It pushes us by at least a week. We were targeting June 3rd for the beta, so now we're looking at June 10th minimum.
+
+Alex Thompson: That's going to be a problem. Marketing already announced the June 5th beta to the waitlist. We have 2,300 people expecting access.
+
+Sarah Chen: Okay, this is a risk we need to flag. Someone needs to loop in the marketing team today. Jordan, can you take that?
+
+Jordan Kim: I can send the note, but I don't have context on the full impact. Marcus, can you write up a one-paragraph technical summary I can include?
+
+Marcus Rivera: Yeah, I'll do that by end of day.
+
+Sarah Chen: Good. So decisions so far: one, we're migrating auth to Passport.js — Priya owns it, targeting completion by May 30th. Two, Marcus will write up the timeline impact for marketing by EOD today. Three, we're moving the beta to June 10th, pending confirmation from leadership.
+
+Alex Thompson: I want to flag something. On the frontend side, the dashboard is ready except for the user permissions panel. That's blocked on the auth work. So my availability next week depends on how quickly we can unblock auth.
+
+Sarah Chen: Understood. Alex, what can you work on while auth is in progress?
+
+Alex Thompson: I can finish the onboarding flow and probably knock out the notification preferences UI. That's about 8 points of work.
+
+Jordan Kim: From QA perspective, I've been regression testing the payment flow and found three bugs. Two are minor UI glitches — a button misalignment on Safari and a timezone display issue. The third one is more serious: transaction amounts above $9,999 are being truncated in the confirmation email. That's a financial data bug.
+
+Sarah Chen: That third one sounds high priority. Who owns the email templating?
+
+Priya Patel: That's me. I didn't know about this one. Jordan, can you file that in Linear with steps to repro?
+
+Jordan Kim: Already done — it's LINEAR-847. I filed it this morning.
+
+Priya Patel: Okay, I'll look at it today. If it's what I think it is, it's a format string issue and should be a quick fix.
+
+Sarah Chen: Let's make sure that's done before we ship anything. That's a potential financial compliance issue.
+
+Marcus Rivera: Agreed. I'd call that a blocker for any production release.
+
+Sarah Chen: Okay, marking that as a blocker. Priya owns LINEAR-847, target fix by May 22nd.
+
+Jordan Kim: Also, we still don't have automated tests for the checkout flow. I've been doing manual regression every sprint. It's taking about 4 hours each time and I'm worried we're going to miss something eventually.
+
+Sarah Chen: We've talked about this before. Marcus, is there budget in the next sprint for automated checkout tests?
+
+Marcus Rivera: There should be. I'll put it in the sprint proposal. But realistically it won't make it into this sprint — we're already committed.
+
+Sarah Chen: Okay, let's make it a priority for next sprint. Marcus, own that backlog item.
+
+Alex Thompson: Can we also talk about the performance issues on the product listing page? On mobile with slow connections, it's taking 8+ seconds to load. We got complaints about this in user feedback last week.
+
+Marcus Rivera: Yeah, I've seen it. The problem is we're loading all product images upfront without lazy loading. It's a known issue but it keeps getting deprioritized.
+
+Sarah Chen: What's the fix?
+
+Alex Thompson: Implement lazy loading. Probably a day of work. I can do it this sprint if we drop one of the lower priority items.
+
+Sarah Chen: Let's do it. Drop the dark mode toggle — that's not customer-impacting. Alex, own the lazy loading implementation by May 24th.
+
+Marcus Rivera: Good call.
+
+Sarah Chen: Let's do a quick risk review before we wrap. What's everyone worried about?
+
+Marcus Rivera: Auth migration timeline is my main concern. If we find more issues during the refactor, we could slip further. We don't have a buffer.
+
+Priya Patel: I'm worried about the financial bug. If there are more like it hiding in the payment flow, we could have a serious problem. We should consider a broader audit.
+
+Jordan Kim: The manual QA burden is unsustainable. I'm the only QA person and I'm already blocking releases because I can't get through everything. We need either automation or another QA resource.
+
+Alex Thompson: I'm a bit concerned we're accumulating technical debt faster than we're paying it down. The lazy loading thing, the auth library, the email templates — these are all shortcuts that came back to bite us.
+
+Sarah Chen: All valid. Let me summarize the open questions and action items before we close.
+
+Open questions:
+- Do we need to hire a second QA engineer, or can we solve this with automation?
+- Should we do a broader security audit of the payment flow given the LINEAR-847 discovery?
+- Who from leadership needs to approve the June 10th beta date change?
+
+Action items:
+- Priya: Migrate auth to Passport.js — due May 30th
+- Marcus: Write marketing impact summary — due today (May 19th)
+- Marcus: Add automated checkout tests to next sprint backlog — due May 23rd (sprint planning)
+- Priya: Fix LINEAR-847 transaction amount bug — due May 22nd
+- Alex: Implement lazy loading for product images — due May 24th
+- Jordan: Send comms to marketing about beta delay — due today
+- Sarah: Escalate beta timeline change to leadership — due May 20th
+
+Sarah Chen: Anything else before we close?
+
+Marcus Rivera: Just want to say the team handled a tough sprint well. Three big surprises and we still shipped 14 points.
+
+Sarah Chen: Agreed. Good work everyone. Same time next sprint. See you at standup tomorrow.
+
+---
+[Meeting ended at 10:47 AM]
