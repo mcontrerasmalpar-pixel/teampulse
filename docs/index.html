@@ -202,6 +202,61 @@
     .t-cyan { color: #e08030; }
     .t-bold { font-weight: 700; }
 
+    /* ── AI reasoning terminal ── */
+    .t-user-line {
+      display: flex; align-items: flex-start; gap: .6rem;
+      margin-bottom: .9rem;
+    }
+    .t-user-icon {
+      flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+      background: var(--orange); display: flex; align-items: center;
+      justify-content: center; font-size: .6rem; font-weight: 700; color: #fff;
+      margin-top: 1px;
+    }
+    .t-user-msg { color: var(--term-text); font-style: normal; }
+
+    .t-think-block {
+      margin: .6rem 0 .6rem 1.5rem;
+      padding: .6rem .9rem;
+      border-left: 2px solid var(--term-bdr);
+      display: flex; flex-direction: column; gap: .3rem;
+    }
+    .t-think {
+      color: #7a5a38; font-style: italic; font-size: .75rem; line-height: 1.5;
+    }
+    .t-think-step {
+      color: #6a4a28; font-size: .72rem;
+      display: flex; align-items: flex-start; gap: .4rem;
+    }
+    .t-think-step::before {
+      content: '›'; color: #5a3a18; flex-shrink: 0;
+    }
+
+    .t-exec-block {
+      margin: .7rem 0 .7rem 0;
+      background: var(--term-surf2);
+      border: 1px solid var(--term-bdr);
+      border-radius: 6px; padding: .5rem .9rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .t-exec-label { color: #5a4030; font-size: .68rem; text-transform: uppercase; letter-spacing: .5px; }
+    .t-exec-cmd { color: #c09050; }
+
+    .t-ai-response {
+      margin-left: 0; margin-top: .5rem;
+    }
+    .t-ai-label {
+      font-size: .68rem; color: #5a4030; text-transform: uppercase;
+      letter-spacing: .6px; margin-bottom: .4rem;
+    }
+    .t-result-block { margin-top: .3rem; }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .t-cursor { animation: blink 1.1s step-end infinite; }
+
+    @keyframes fadeup { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+    .t-fadein { animation: fadeup .3s ease both; }
+
     /* ── Stats strip ─────────────────────────────────────────────────────────── */
     .stats-strip {
       border-top: 1px solid var(--border);
@@ -707,81 +762,150 @@
         <div class="tab" onclick="switchTab(3)">chat</div>
       </div>
 
+      <!-- analyze -->
       <div class="terminal-body tab-panel active" id="panel-0">
-        <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse analyze sprint-review.txt --skill product-manager</span></div>
-        <div class="t-dim">  › Analyzing sprint-review.txt...</div>
-        <div class="t-green">  ✓ Analysis complete  ·  id: sprint-review-lx7k2</div>
-        <br/>
-        <div class="t-bold t-cyan">  ── Summary ──</div>
-        <div>  Auth migrated to Passport.js after a blocking bug. Mobile beta</div>
-        <div>  slipped from June 3rd → June 10th. 14/17 story points shipped.</div>
-        <br/>
-        <div class="t-cyan">  ── Decisions (4) ──</div>
-        <div>  <span class="t-bold">1.</span> Migrate auth to Passport.js — <span class="t-dim">Priya Patel</span> · <span class="t-yellow">pending</span></div>
-        <div>  <span class="t-bold">2.</span> Push mobile beta to June 10th — <span class="t-dim">All</span> · <span class="t-green">open</span></div>
-        <br/>
-        <div class="t-yellow">  ── Tasks (7) ──</div>
-        <div>  ○ Fix LINEAR-847 transaction bug — <span class="t-bold">Priya</span> [<span class="t-red">high</span>]</div>
-        <div>  ○ Lazy load product images — <span class="t-bold">Alex</span> [<span class="t-yellow">medium</span>]</div>
-        <div>  ○ Write marketing impact summary — <span class="t-bold">Marcus</span> [<span class="t-yellow">medium</span>]</div>
-        <br/>
-        <div class="t-dim">  Run <span class="t-cyan">teampulse chat</span> to explore interactively.</div>
+        <div class="t-user-line">
+          <div class="t-user-icon">U</div>
+          <div class="t-user-msg">help me understand my sprint meeting from this morning</div>
+        </div>
+
+        <div class="t-think-block">
+          <div class="t-think">Thinking…</div>
+          <div class="t-think-step">Searching for recent meeting files in current directory</div>
+          <div class="t-think-step">Found <span style="color:#c09050">sprint-review.txt</span> — modified 2h ago, 4.2 KB</div>
+          <div class="t-think-step">Your default skill is <span style="color:#c09050">product-manager</span> — I'll use that lens</div>
+          <div class="t-think-step">Sending to Gemini 2.0 Flash for structured extraction…</div>
+        </div>
+
+        <div class="t-exec-block">
+          <span class="t-exec-label">run</span>
+          <span class="t-exec-cmd">teampulse analyze sprint-review.txt --skill product-manager</span>
+        </div>
+
+        <div class="t-ai-response">
+          <div class="t-green">  ✓ Done  ·  id: sprint-lx7k2  ·  sentiment: mixed</div>
+          <br/>
+          <div class="t-ai-label">  Summary</div>
+          <div class="t-dim">  14/17 story points shipped. Auth is moving to Passport.js after</div>
+          <div class="t-dim">  a blocking bug — that pushed mobile beta from June 3 → June 10.</div>
+          <br/>
+          <div class="t-cyan t-bold">  4 Decisions</div>
+          <div>  <span class="t-dim">1.</span> Migrate auth to Passport.js <span class="t-dim">·</span> <span class="t-yellow">pending</span> <span class="t-dim">· Priya</span></div>
+          <div>  <span class="t-dim">2.</span> Push mobile beta to June 10 <span class="t-dim">·</span> <span class="t-green">open</span> <span class="t-dim">· All</span></div>
+          <br/>
+          <div class="t-yellow t-bold">  7 Tasks  <span class="t-red" style="font-weight:400">· ⚠ 2 unassigned</span></div>
+          <div>  ○ Fix LINEAR-847 — <span class="t-bold">Priya</span> <span class="t-red">[high]</span></div>
+          <div>  ○ Lazy load images — <span class="t-bold">Alex</span> <span class="t-yellow">[medium]</span></div>
+          <div>  ○ Marketing summary — <span class="t-bold">Marcus</span> <span class="t-yellow">[medium]</span></div>
+          <br/>
+          <div class="t-dim">  <span style="color:#7a5a38;font-style:italic">Tip: run teampulse drift to see if these issues appeared before.</span></div>
+        </div>
       </div>
 
+      <!-- drift -->
       <div class="terminal-body tab-panel" id="panel-1">
-        <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse drift --last 2</span></div>
-        <div class="t-green">  ✓ Drift analysis complete</div>
-        <div class="t-dim">  Comparing: Sprint Week 5 → Sprint Week 6</div>
-        <br/>
-        <div>  <span class="t-bold">Overall Drift Score:</span> <span class="t-yellow t-bold">42/100</span> <span class="t-dim">(moderate drift)</span></div>
-        <br/>
-        <div class="t-dim">  ┌──────────────────────┬────────────┬─────────────┬───────┐</div>
-        <div class="t-dim">  │ <span class="t-cyan">Topic</span>                │ <span class="t-cyan">Week 5</span>     │ <span class="t-cyan">Week 6</span>      │ <span class="t-cyan">Score</span> │</div>
-        <div class="t-dim">  ├──────────────────────┼────────────┼─────────────┼───────┤</div>
-        <div class="t-dim">  │ Auth migration       │ proposed   │ <span class="t-green">decided ✓</span>  │ <span class="t-green">10</span>    │</div>
-        <div class="t-dim">  │ QA automation        │ discussed  │ discussed   │ <span class="t-yellow">60</span>    │</div>
-        <div class="t-dim">  │ Mobile beta date     │ June 3rd   │ <span class="t-red">June 10th</span>  │ <span class="t-red">75</span>    │</div>
-        <div class="t-dim">  └──────────────────────┴────────────┴─────────────┴───────┘</div>
-        <br/>
-        <div class="t-red">  [HIGH] QA coverage gap — unassigned across both meetings</div>
+        <div class="t-user-line">
+          <div class="t-user-icon">U</div>
+          <div class="t-user-msg">we keep going in circles — are we actually making progress between meetings?</div>
+        </div>
+
+        <div class="t-think-block">
+          <div class="t-think">Thinking…</div>
+          <div class="t-think-step">You have 8 meetings in memory. I'll compare the two most recent</div>
+          <div class="t-think-step">Meeting A: <span style="color:#c09050">Sprint Week 5</span> (May 11)</div>
+          <div class="t-think-step">Meeting B: <span style="color:#c09050">Sprint Week 6</span> (May 18) — today</div>
+          <div class="t-think-step">Analyzing decision overlap, regressions, and recurring blockers…</div>
+        </div>
+
+        <div class="t-exec-block">
+          <span class="t-exec-label">run</span>
+          <span class="t-exec-cmd">teampulse drift --last 2</span>
+        </div>
+
+        <div class="t-ai-response">
+          <div class="t-green">  ✓ Drift analysis complete</div>
+          <div>  <span class="t-bold">Overall Drift Score: </span><span class="t-yellow t-bold">42/100</span> <span class="t-dim">— moderate drift</span></div>
+          <br/>
+          <div class="t-dim">  ┌──────────────────────┬────────────┬─────────────┬───────┐</div>
+          <div class="t-dim">  │ <span class="t-cyan">Topic</span>                │ <span class="t-cyan">Week 5</span>     │ <span class="t-cyan">Week 6</span>      │ <span class="t-cyan">Score</span> │</div>
+          <div class="t-dim">  ├──────────────────────┼────────────┼─────────────┼───────┤</div>
+          <div class="t-dim">  │ Auth migration       │ proposed   │ <span class="t-green">decided ✓</span>  │ <span class="t-green">10</span>    │</div>
+          <div class="t-dim">  │ QA automation        │ discussed  │ discussed   │ <span class="t-yellow">60</span>    │</div>
+          <div class="t-dim">  │ Mobile beta date     │ June 3rd   │ <span class="t-red">June 10th</span>  │ <span class="t-red">75</span>    │</div>
+          <div class="t-dim">  └──────────────────────┴────────────┴─────────────┴───────┘</div>
+          <br/>
+          <div style="color:#7a5a38;font-style:italic;font-size:.75rem">  QA automation has appeared in 3 consecutive meetings with no owner.</div>
+          <div style="color:#7a5a38;font-style:italic;font-size:.75rem">  That's the main blocker. Everything else is moving forward.</div>
+        </div>
       </div>
 
+      <!-- watchdog -->
       <div class="terminal-body tab-panel" id="panel-2">
-        <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse watchdog</span></div>
-        <div class="t-green">  ✓ Watchdog scan complete  ·  8 meetings</div>
-        <br/>
-        <div>  <span class="t-bold">Team Health Score:</span> <span class="t-yellow t-bold">58/100</span> <span class="t-dim">(needs attention)</span></div>
-        <br/>
-        <div class="t-yellow">  ── Top Priorities ──</div>
-        <div>  1. Assign owner to QA automation initiative</div>
-        <div>  2. Conduct payment flow security audit (LINEAR-847 pattern)</div>
-        <div>  3. Redistribute tasks from Priya — 9 items, 6 meetings</div>
-        <br/>
-        <div class="t-red">  ── Unresolved Risks ──</div>
-        <div>  <span class="t-red">[HIGH]</span> Undetected financial data bugs in payment flow</div>
-        <div>     <span class="t-dim">Owner: <span class="t-red">⚠ none</span>  ·  Seen in 3 meetings</span></div>
-        <div>  <span class="t-yellow">[MEDIUM]</span> Auth migration timeline has no buffer</div>
-        <div>     <span class="t-dim">Owner: Priya Patel  ·  Seen in 2 meetings</span></div>
+        <div class="t-user-line">
+          <div class="t-user-icon">U</div>
+          <div class="t-user-msg">is anyone on the team getting overwhelmed? feels like some people have too much</div>
+        </div>
+
+        <div class="t-think-block">
+          <div class="t-think">Thinking…</div>
+          <div class="t-think-step">Scanning all 8 meetings for task assignment patterns</div>
+          <div class="t-think-step">Counting tasks per person across meeting history</div>
+          <div class="t-think-step">Looking for risks without owners and recurring unresolved topics</div>
+          <div class="t-think-step">This may take ~20 seconds for 8 meetings…</div>
+        </div>
+
+        <div class="t-exec-block">
+          <span class="t-exec-label">run</span>
+          <span class="t-exec-cmd">teampulse watchdog</span>
+        </div>
+
+        <div class="t-ai-response">
+          <div class="t-green">  ✓ Scan complete  ·  8 meetings analyzed</div>
+          <div>  <span class="t-bold">Team Health: </span><span class="t-yellow t-bold">58/100</span> <span class="t-dim">— needs attention</span></div>
+          <br/>
+          <div class="t-yellow t-bold">  Top Priorities</div>
+          <div>  <span class="t-dim">1.</span> Assign owner to QA automation — seen in 3 meetings</div>
+          <div>  <span class="t-dim">2.</span> Payment flow audit — no owner, high risk</div>
+          <div>  <span class="t-dim">3.</span> <span class="t-red">Priya has 9 tasks across 6 meetings</span> — redistribute now</div>
+          <br/>
+          <div style="color:#7a5a38;font-style:italic;font-size:.75rem">  Yes — Priya is carrying most of the load. The payment audit</div>
+          <div style="color:#7a5a38;font-style:italic;font-size:.75rem">  is the easiest task to move to someone else this sprint.</div>
+        </div>
       </div>
 
+      <!-- chat -->
       <div class="terminal-body tab-panel" id="panel-3">
-        <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse chat</span></div>
-        <div class="t-dim">  │ Ask anything about your meeting history.</div>
-        <div class="t-dim">  │ Type /help for commands, Ctrl+C to exit.</div>
-        <br/>
-        <div><span class="t-cyan">  you</span><span class="t-dim"> › </span>who has the most open tasks?</div>
-        <br/>
-        <div>  Based on your last 5 meetings:</div>
-        <br/>
-        <div>  • <span class="t-bold">Priya Patel</span> — 5 open tasks</div>
-        <div>    auth migration, LINEAR-847, email templates, payment audit</div>
-        <div>  • <span class="t-bold">Alex Thompson</span> — 3 open tasks</div>
-        <div>  • <span class="t-bold">Marcus Rivera</span> — 2 open tasks</div>
-        <br/>
-        <div>  <span class="t-red">⚠</span> Priya is overloaded. Consider redistributing the</div>
-        <div>  payment audit task before next sprint.</div>
-        <br/>
-        <div><span class="t-cyan">  you</span><span class="t-dim"> › </span><span style="border-right:2px solid #D94A14;padding-right:2px">_</span></div>
+        <div class="t-user-line">
+          <div class="t-user-icon">U</div>
+          <div class="t-user-msg">i don't know how to read these results, what should I do first?</div>
+        </div>
+
+        <div class="t-think-block">
+          <div class="t-think">Looking at your last 5 meetings to prioritize…</div>
+        </div>
+
+        <div class="t-ai-response" style="margin-bottom:.9rem">
+          <div>  Given your current meeting history, here's what I'd do first:</div>
+          <br/>
+          <div>  <span class="t-bold t-red">1. Assign the QA automation task</span> right now.</div>
+          <div class="t-dim">     It's appeared in 3 meetings with no owner. Every sprint</div>
+          <div class="t-dim">     you defer it, the risk compounds. Takes 2 minutes to fix.</div>
+          <br/>
+          <div>  <span class="t-bold t-yellow">2. Move the payment audit off Priya's plate.</span></div>
+          <div class="t-dim">     She has 9 open items. The audit is the most transferable.</div>
+          <br/>
+          <div>  <span class="t-bold t-green">3. Everything else is on track.</span></div>
+          <div class="t-dim">     Auth migration is decided, Alex has clear ownership.</div>
+        </div>
+
+        <div class="t-user-line">
+          <div class="t-user-icon">U</div>
+          <div class="t-user-msg">can you export a summary I can paste in Slack?<span class="t-cursor" style="border-right:2px solid #D94A14;margin-left:2px"> </span></div>
+        </div>
+
+        <div class="t-think-block">
+          <div class="t-think">Formatting for Slack (plain text, no markdown syntax)…</div>
+        </div>
       </div>
     </div>
   </div>
