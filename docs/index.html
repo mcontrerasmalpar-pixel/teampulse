@@ -411,6 +411,226 @@
     footer a:hover { color: var(--orange); text-decoration: none; }
     .footer-links { display: flex; gap: 1.25rem; }
 
+    /* ── App demo ────────────────────────────────────────────────────────────── */
+    .app-demo {
+      margin-top: 3rem;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.08);
+      background: #fff;
+    }
+    .app-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 1rem;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      flex-wrap: wrap;
+    }
+    .app-meeting-title {
+      font-size: 1.05rem; font-weight: 700;
+      color: var(--text); margin-bottom: .3rem;
+    }
+    .app-meta {
+      font-size: .78rem; color: var(--text-muted);
+      display: flex; gap: .4rem; flex-wrap: wrap; align-items: center;
+    }
+    .app-dot { opacity: .4; }
+    .app-header-right {
+      display: flex; align-items: center;
+      gap: .6rem; flex-wrap: wrap; flex-shrink: 0;
+    }
+    .app-score-chip {
+      display: flex; flex-direction: column; align-items: center;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: .35rem .7rem; min-width: 52px;
+    }
+    .app-score-label { font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+    .app-score-val { font-size: 1.1rem; font-weight: 800; letter-spacing: -1px; }
+    .app-badge-skill {
+      font-family: var(--font-mono); font-size: .72rem;
+      color: var(--orange); background: var(--orange-dim);
+      border: 1px solid rgba(217,74,20,.25);
+      padding: .3rem .6rem; border-radius: 6px; white-space: nowrap;
+    }
+    .app-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem; background: var(--surface);
+      overflow-x: auto;
+    }
+    .app-tab {
+      padding: .7rem 1rem; font-size: .82rem; font-weight: 500;
+      color: var(--text-dim); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap; user-select: none;
+    }
+    .app-tab.active { color: var(--orange); border-color: var(--orange); font-weight: 600; }
+    .app-body {
+      display: grid; grid-template-columns: 1fr 280px;
+      min-height: 440px;
+    }
+    .app-main { padding: 1.5rem; overflow: auto; }
+    .demo-panel { display: none; }
+    .demo-panel.active { display: block; }
+
+    /* Summary */
+    .app-summary-text {
+      font-size: .9rem; line-height: 1.7; color: var(--text-dim);
+      padding: 1rem 1.25rem; background: var(--surface);
+      border-radius: 8px; border-left: 3px solid var(--orange);
+      margin-bottom: 1.5rem;
+    }
+    .app-kpi-row {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .app-kpi {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: .9rem; text-align: center;
+    }
+    .app-kpi-num { font-size: 1.4rem; font-weight: 900; letter-spacing: -1px; color: var(--text); }
+    .app-kpi-label { font-size: .72rem; color: var(--text-muted); margin-top: .2rem; }
+    .app-section-label {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-muted); margin-bottom: .6rem;
+    }
+    .app-tags { display: flex; gap: .4rem; flex-wrap: wrap; }
+    .app-tag {
+      padding: .25rem .6rem; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 100px;
+      font-size: .78rem; color: var(--text-dim);
+    }
+    .app-questions { display: flex; flex-direction: column; gap: .5rem; }
+    .app-question-item {
+      font-size: .85rem; color: var(--text-dim); padding: .5rem .75rem;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 7px;
+    }
+
+    /* Decisions */
+    .app-decision-card {
+      padding: 1rem 1.25rem; border: 1px solid var(--border);
+      border-radius: 9px; margin-bottom: .75rem; background: var(--bg);
+    }
+    .app-decision-header { display: flex; align-items: center; gap: .6rem; margin-bottom: .35rem; flex-wrap: wrap; }
+    .app-decision-title { font-size: .9rem; font-weight: 700; color: var(--text); }
+    .app-status {
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .5px; padding: .18rem .5rem; border-radius: 100px;
+    }
+    .app-status-open { background: #e8f4e0; color: #3d7020; }
+    .app-status-pending { background: #fef3dc; color: #8a5c00; }
+    .app-status-blocked { background: #fde8e4; color: #9b2510; }
+    .app-decision-meta { font-size: .78rem; color: var(--text-muted); margin-bottom: .4rem; }
+    .app-decision-ctx { font-size: .83rem; color: var(--text-dim); line-height: 1.55; }
+
+    /* Tasks */
+    .app-priority-group { margin-bottom: 1.25rem; }
+    .app-priority-label {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; margin-bottom: .6rem; padding: .2rem 0;
+    }
+    .app-priority-high { color: var(--red); }
+    .app-priority-medium { color: #c4883a; }
+    .app-priority-low { color: var(--text-muted); }
+    .app-task-item {
+      display: flex; align-items: flex-start; gap: .75rem;
+      padding: .65rem .75rem; border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: .4rem; background: #fff;
+    }
+    .app-task-check {
+      width: 16px; height: 16px; border: 1.5px solid var(--border);
+      border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+    }
+    .app-task-body { flex: 1; }
+    .app-task-desc { font-size: .85rem; font-weight: 500; color: var(--text); }
+    .app-task-meta { font-size: .76rem; color: var(--text-muted); margin-top: .2rem; }
+    .app-task-badge {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      padding: .18rem .45rem; border-radius: 100px; flex-shrink: 0; margin-top: 2px;
+    }
+    .app-task-high { background: #fde8e4; color: #9b2510; }
+    .app-task-medium { background: #fef3dc; color: #8a5c00; }
+    .app-task-low { background: var(--surface2); color: var(--text-muted); }
+    .app-warn-bar {
+      font-size: .82rem; font-weight: 600;
+      color: var(--red); background: #fde8e4;
+      border: 1px solid rgba(200,48,16,.2);
+      border-radius: 8px; padding: .65rem 1rem;
+      margin-top: .5rem;
+    }
+
+    /* Risks */
+    .app-risk-card {
+      border-radius: 9px; padding: .9rem 1.1rem; margin-bottom: .75rem;
+      border-left: 4px solid;
+    }
+    .app-risk-high { background: #fff5f4; border-color: #c83010; }
+    .app-risk-medium { background: #fffbf0; border-color: #c4883a; }
+    .app-risk-low { background: #f4faf0; border-color: #5a8830; }
+    .app-risk-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
+    .app-risk-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .app-risk-level { font-size: .7rem; font-weight: 800; letter-spacing: .5px; color: var(--text-muted); }
+    .app-risk-title { font-size: .88rem; font-weight: 600; color: var(--text); }
+    .app-risk-mitigation { font-size: .82rem; color: var(--text-dim); line-height: 1.55; }
+
+    /* Chat */
+    .app-chat-log { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1rem; }
+    .app-chat-msg {
+      padding: .75rem 1rem; border-radius: 10px;
+      font-size: .85rem; line-height: 1.6; max-width: 90%;
+    }
+    .app-chat-user {
+      background: var(--orange); color: #fff;
+      border-radius: 10px 10px 2px 10px; align-self: flex-end;
+    }
+    .app-chat-ai {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text-dim); border-radius: 10px 10px 10px 2px; align-self: flex-start;
+    }
+    .app-chat-input-wrap { border-top: 1px solid var(--border); padding-top: 1rem; }
+    .app-chat-input {
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: .7rem 1rem; font-size: .85rem; color: var(--text-muted);
+      background: var(--bg); cursor: text;
+    }
+
+    /* Sidebar */
+    .app-sidebar {
+      border-left: 1px solid var(--border);
+      background: var(--surface); padding: 1.25rem 1rem;
+      overflow-y: auto;
+    }
+    .app-sidebar-title {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--text-muted);
+      margin-bottom: .75rem;
+    }
+    .app-action-item {
+      display: flex; gap: .6rem; margin-bottom: .6rem; align-items: flex-start;
+    }
+    .app-action-icon {
+      font-size: .8rem; color: var(--orange); font-weight: 700;
+      flex-shrink: 0; padding-top: 1px;
+    }
+    .app-action-text { font-size: .8rem; color: var(--text-dim); line-height: 1.5; }
+    .app-sidebar-divider { border-top: 1px solid var(--border); margin: 1rem 0; }
+    .app-export-btn {
+      width: 100%; text-align: center; padding: .6rem;
+      background: var(--orange); color: #fff;
+      border-radius: 7px; font-size: .8rem; font-weight: 600;
+      cursor: pointer; transition: background .15s; margin-top: .5rem;
+    }
+    .app-export-btn:hover { background: var(--orange-2); }
+
+    @media (max-width: 900px) {
+      .app-body { grid-template-columns: 1fr; }
+      .app-sidebar { border-left: none; border-top: 1px solid var(--border); }
+      .app-kpi-row { grid-template-columns: repeat(2,1fr); }
+    }
+
     /* ── Divider ──────────────────────────────────────────────────────────────── */
     hr { border: none; border-top: 1px solid var(--border); }
 
@@ -592,6 +812,303 @@
     </div>
   </div>
 </div>
+
+<!-- ── App demo ──────────────────────────────────────────────────────────────── -->
+<section class="section" id="demo" style="padding-bottom:2rem">
+  <div class="section-eyebrow">Live output</div>
+  <h2 class="section-title">What TeamPulse gives you.</h2>
+  <p class="section-sub">Run one command. Get a structured breakdown of your meeting — ready to act on.</p>
+
+  <div class="app-demo">
+    <!-- App header -->
+    <div class="app-header">
+      <div class="app-header-left">
+        <div class="app-meeting-title">Reunión Sprint Review Q2</div>
+        <div class="app-meta">
+          <span>May 18, 2026</span>
+          <span class="app-dot">·</span>
+          <span>4:00 AM – 4:27 AM</span>
+          <span class="app-dot">·</span>
+          <span>Google Meet</span>
+          <span class="app-dot">·</span>
+          <span>Priya Patel, Alex Thompson, Marcus Rivera</span>
+        </div>
+      </div>
+      <div class="app-header-right">
+        <div class="app-score-chip">
+          <span class="app-score-label">Sentiment</span>
+          <span class="app-score-val" style="color:#5a8830">84</span>
+        </div>
+        <div class="app-score-chip">
+          <span class="app-score-label">Health</span>
+          <span class="app-score-val" style="color:#c4883a">62</span>
+        </div>
+        <div class="app-score-chip">
+          <span class="app-score-label">Tasks</span>
+          <span class="app-score-val" style="color:#D94A14">7</span>
+        </div>
+        <div class="app-badge-skill">skill: product-manager</div>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="app-tabs">
+      <div class="app-tab active" onclick="demoTab(0,this)">Summary</div>
+      <div class="app-tab" onclick="demoTab(1,this)">Decisions</div>
+      <div class="app-tab" onclick="demoTab(2,this)">Tasks</div>
+      <div class="app-tab" onclick="demoTab(3,this)">Risks</div>
+      <div class="app-tab" onclick="demoTab(4,this)">Chat</div>
+    </div>
+
+    <!-- Body: main + sidebar -->
+    <div class="app-body">
+      <div class="app-main">
+
+        <!-- Summary panel -->
+        <div class="demo-panel active" id="demo-0">
+          <div class="app-summary-text">
+            La reunión revisó el avance del Sprint Q2: 14 de 17 story points completados. Se decidió migrar la autenticación a Passport.js tras un bug bloqueante en la librería actual, lo que empujó el mobile beta de Junio 3 a Junio 10. Se identificaron 2 riesgos sin dueño.
+          </div>
+          <div class="app-kpi-row">
+            <div class="app-kpi">
+              <div class="app-kpi-num">14/17</div>
+              <div class="app-kpi-label">Story points</div>
+            </div>
+            <div class="app-kpi">
+              <div class="app-kpi-num" style="color:#c4883a">4</div>
+              <div class="app-kpi-label">Decisions</div>
+            </div>
+            <div class="app-kpi">
+              <div class="app-kpi-num" style="color:#D94A14">2</div>
+              <div class="app-kpi-label">Unassigned tasks</div>
+            </div>
+            <div class="app-kpi">
+              <div class="app-kpi-num" style="color:#c83010">2</div>
+              <div class="app-kpi-label">Open risks</div>
+            </div>
+          </div>
+          <div class="app-section-label">Key Topics</div>
+          <div class="app-tags">
+            <span class="app-tag">Auth migration</span>
+            <span class="app-tag">Mobile beta</span>
+            <span class="app-tag">LINEAR-847</span>
+            <span class="app-tag">QA automation</span>
+            <span class="app-tag">Passport.js</span>
+            <span class="app-tag">Payment flow</span>
+          </div>
+          <div class="app-section-label" style="margin-top:1.5rem">Open Questions</div>
+          <div class="app-questions">
+            <div class="app-question-item">Will the auth migration affect the existing session management flow?</div>
+            <div class="app-question-item">Who owns the QA automation initiative going forward?</div>
+            <div class="app-question-item">Is the June 10th mobile beta date realistic given the current blockers?</div>
+          </div>
+        </div>
+
+        <!-- Decisions panel -->
+        <div class="demo-panel" id="demo-1">
+          <div class="app-decision-card">
+            <div class="app-decision-header">
+              <span class="app-decision-title">Migrate auth to Passport.js</span>
+              <span class="app-status app-status-pending">pending</span>
+            </div>
+            <div class="app-decision-meta">Owner: <strong>Priya Patel</strong></div>
+            <div class="app-decision-ctx">Blocking bug found in current auth library during regression tests. Team agreed Passport.js is the safer long-term path despite the short-term timeline hit.</div>
+          </div>
+          <div class="app-decision-card">
+            <div class="app-decision-header">
+              <span class="app-decision-title">Push mobile beta to June 10th</span>
+              <span class="app-status app-status-open">open</span>
+            </div>
+            <div class="app-decision-meta">Owner: <strong>All</strong></div>
+            <div class="app-decision-ctx">Directly caused by auth migration scope. Stakeholders notified. Marketing asked to adjust campaign timing accordingly.</div>
+          </div>
+          <div class="app-decision-card">
+            <div class="app-decision-header">
+              <span class="app-decision-title">Defer QA automation to next sprint</span>
+              <span class="app-status app-status-blocked">blocked</span>
+            </div>
+            <div class="app-decision-meta">Owner: <span style="color:var(--red)">⚠ unassigned</span></div>
+            <div class="app-decision-ctx">No available engineer capacity this sprint. Risk accepted by PM — flagged as recurring issue across 3 previous meetings.</div>
+          </div>
+          <div class="app-decision-card">
+            <div class="app-decision-header">
+              <span class="app-decision-title">Alex leads product image lazy loading</span>
+              <span class="app-status app-status-open">open</span>
+            </div>
+            <div class="app-decision-meta">Owner: <strong>Alex Thompson</strong></div>
+            <div class="app-decision-ctx">Performance regression detected in staging. Lazy loading approved as the fix — low risk, high impact.</div>
+          </div>
+        </div>
+
+        <!-- Tasks panel -->
+        <div class="demo-panel" id="demo-2">
+          <div class="app-priority-group">
+            <div class="app-priority-label app-priority-high">High Priority</div>
+            <div class="app-task-item">
+              <span class="app-task-check"></span>
+              <div class="app-task-body">
+                <div class="app-task-desc">Fix LINEAR-847 transaction amount bug</div>
+                <div class="app-task-meta"><strong>Priya Patel</strong> · no deadline</div>
+              </div>
+              <span class="app-task-badge app-task-high">high</span>
+            </div>
+          </div>
+          <div class="app-priority-group">
+            <div class="app-priority-label app-priority-medium">Medium Priority</div>
+            <div class="app-task-item">
+              <span class="app-task-check"></span>
+              <div class="app-task-body">
+                <div class="app-task-desc">Implement lazy loading for product images</div>
+                <div class="app-task-meta"><strong>Alex Thompson</strong> · due June 8</div>
+              </div>
+              <span class="app-task-badge app-task-medium">medium</span>
+            </div>
+            <div class="app-task-item">
+              <span class="app-task-check"></span>
+              <div class="app-task-body">
+                <div class="app-task-desc">Write marketing impact summary for beta delay</div>
+                <div class="app-task-meta"><strong>Marcus Rivera</strong> · due June 6</div>
+              </div>
+              <span class="app-task-badge app-task-medium">medium</span>
+            </div>
+            <div class="app-task-item">
+              <span class="app-task-check"></span>
+              <div class="app-task-body">
+                <div class="app-task-desc">Update session management for Passport.js integration</div>
+                <div class="app-task-meta"><strong>Priya Patel</strong> · due June 9</div>
+              </div>
+              <span class="app-task-badge app-task-medium">medium</span>
+            </div>
+          </div>
+          <div class="app-priority-group">
+            <div class="app-priority-label app-priority-low">Low Priority</div>
+            <div class="app-task-item">
+              <span class="app-task-check"></span>
+              <div class="app-task-body">
+                <div class="app-task-desc">Document QA test coverage gaps</div>
+                <div class="app-task-meta"><span style="color:var(--red)">⚠ unassigned</span> · no deadline</div>
+              </div>
+              <span class="app-task-badge app-task-low">low</span>
+            </div>
+            <div class="app-task-item">
+              <span class="app-task-check"></span>
+              <div class="app-task-body">
+                <div class="app-task-desc">Notify design team of mobile beta date change</div>
+                <div class="app-task-meta"><strong>Marcus Rivera</strong> · due June 4</div>
+              </div>
+              <span class="app-task-badge app-task-low">low</span>
+            </div>
+            <div class="app-task-item">
+              <span class="app-task-check"></span>
+              <div class="app-task-body">
+                <div class="app-task-desc">Review payment flow security after LINEAR-847 pattern</div>
+                <div class="app-task-meta"><span style="color:var(--red)">⚠ unassigned</span> · no deadline</div>
+              </div>
+              <span class="app-task-badge app-task-low">low</span>
+            </div>
+          </div>
+          <div class="app-warn-bar">⚠ 2 tasks have no owner — assign before next sprint</div>
+        </div>
+
+        <!-- Risks panel -->
+        <div class="demo-panel" id="demo-3">
+          <div class="app-risk-card app-risk-high">
+            <div class="app-risk-header">
+              <span class="app-risk-dot" style="background:#c83010"></span>
+              <span class="app-risk-level">HIGH</span>
+              <span class="app-risk-title">Payment flow may contain undetected financial bugs</span>
+            </div>
+            <div class="app-risk-mitigation"><strong>Mitigation:</strong> Conduct focused security audit of payment module before June 10th beta. Assign a dedicated owner immediately.</div>
+          </div>
+          <div class="app-risk-card app-risk-medium">
+            <div class="app-risk-header">
+              <span class="app-risk-dot" style="background:#c4883a"></span>
+              <span class="app-risk-level">MEDIUM</span>
+              <span class="app-risk-title">Auth migration timeline has no buffer for unexpected issues</span>
+            </div>
+            <div class="app-risk-mitigation"><strong>Mitigation:</strong> Add a 1-day buffer before June 9th integration deadline. Priya to flag blockers by EOD June 7th.</div>
+          </div>
+          <div class="app-risk-card app-risk-low">
+            <div class="app-risk-header">
+              <span class="app-risk-dot" style="background:#5a8830"></span>
+              <span class="app-risk-level">LOW</span>
+              <span class="app-risk-title">QA automation indefinitely deferred — manual regression risk</span>
+            </div>
+            <div class="app-risk-mitigation"><strong>Mitigation:</strong> At minimum assign an owner to track coverage gaps between sprints.</div>
+          </div>
+        </div>
+
+        <!-- Chat panel -->
+        <div class="demo-panel" id="demo-4">
+          <div class="app-chat-log">
+            <div class="app-chat-msg app-chat-user">Who is the most overloaded person on this team?</div>
+            <div class="app-chat-msg app-chat-ai">
+              <strong>Priya Patel</strong> carries the heaviest load in this meeting:<br/><br/>
+              • Fix LINEAR-847 transaction bug <span style="color:var(--red)">[high]</span><br/>
+              • Update session management for Passport.js<br/>
+              • Auth migration oversight<br/><br/>
+              That's 3 of 7 tasks plus the most critical technical decision. Consider redistributing the session management task to free up capacity.
+            </div>
+            <div class="app-chat-msg app-chat-user">What decisions could regress by next sprint?</div>
+            <div class="app-chat-msg app-chat-ai">
+              Two decisions are at risk of regression:<br/><br/>
+              1. <strong>QA automation</strong> — deferred again with no owner. This has appeared in 3 consecutive meetings without resolution.<br/>
+              2. <strong>Mobile beta June 10th</strong> — contingent on Passport.js completing on time, which has no buffer. Any delay cascades.<br/><br/>
+              Run <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:var(--font-mono);font-size:.85em">teampulse drift --last 2</code> after the next meeting to confirm.
+            </div>
+          </div>
+          <div class="app-chat-input-wrap">
+            <div class="app-chat-input">Ask about this meeting…</div>
+          </div>
+        </div>
+
+      </div><!-- /.app-main -->
+
+      <!-- Sidebar -->
+      <div class="app-sidebar">
+        <div class="app-sidebar-title">Action items</div>
+        <div class="app-action-item">
+          <div class="app-action-icon">→</div>
+          <div class="app-action-text">Priya: Fix LINEAR-847 before end of week</div>
+        </div>
+        <div class="app-action-item">
+          <div class="app-action-icon">→</div>
+          <div class="app-action-text">Assign owner to QA automation initiative</div>
+        </div>
+        <div class="app-action-item">
+          <div class="app-action-icon">→</div>
+          <div class="app-action-text">Marcus: Notify design team of June 10th date</div>
+        </div>
+        <div class="app-action-item">
+          <div class="app-action-icon">→</div>
+          <div class="app-action-text">Conduct payment flow security audit</div>
+        </div>
+        <div class="app-action-item">
+          <div class="app-action-icon">→</div>
+          <div class="app-action-text">Alex: Lazy loading done before June 8th</div>
+        </div>
+
+        <div class="app-sidebar-divider"></div>
+        <div class="app-sidebar-title">Open questions</div>
+        <div class="app-action-item">
+          <div class="app-action-icon" style="color:var(--text-muted)">?</div>
+          <div class="app-action-text" style="color:var(--text-dim)">Who takes QA automation ownership?</div>
+        </div>
+        <div class="app-action-item">
+          <div class="app-action-icon" style="color:var(--text-muted)">?</div>
+          <div class="app-action-text" style="color:var(--text-dim)">Is June 10th realistic with no buffer?</div>
+        </div>
+        <div class="app-action-item">
+          <div class="app-action-icon" style="color:var(--text-muted)">?</div>
+          <div class="app-action-text" style="color:var(--text-dim)">Will auth change break session flow?</div>
+        </div>
+
+        <div class="app-sidebar-divider"></div>
+        <div class="app-export-btn" onclick="this.textContent='Copied!';setTimeout(()=>this.textContent='↓ Export as Markdown',1500)">↓ Export as Markdown</div>
+      </div><!-- /.app-sidebar -->
+    </div><!-- /.app-body -->
+  </div><!-- /.app-demo -->
+</section>
 
 <!-- ── Features ───────────────────────────────────────────────────────────────── -->
 <section class="section" id="features">
@@ -796,6 +1313,13 @@
 </footer>
 
 <script>
+  function demoTab(i, el) {
+    document.querySelectorAll('.app-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.demo-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('demo-' + i).classList.add('active');
+  }
+
   function switchTab(i) {
     document.querySelectorAll('.tab').forEach((t, j) => t.classList.toggle('active', i === j));
     document.querySelectorAll('.tab-panel').forEach((p, j) => p.classList.toggle('active', i === j));
