@@ -49,23 +49,52 @@ program
   .description('Analyze all transcripts in a directory')
   .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
   .option('-m, --model <name>',    'Override model name')
+  .option('-s, --skill <skill>',   'Role skill: product-manager | developer | founder | marketing', 'product-manager')
   .option('--since <date>',        'Only files modified after this date (YYYY-MM-DD)')
   .option('--filter <type>',       'Show only: decision | task | risk')
   .option('--title <label>',       'Label this batch run')
   .action(batchCommand);
 
+// ── watch ─────────────────────────────────────────────────────────────────────
+program
+  .command('watch [dir]')
+  .description('Monitor a folder and auto-analyze new .txt transcripts')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-m, --model <name>',    'Override model name')
+  .option('-s, --skill <skill>',   'Role skill', 'product-manager')
+  .action(watchCommand);
+
 // ── chat ──────────────────────────────────────────────────────────────────────
 program
   .command('chat')
   .description('Interactive REPL over your meeting history')
-  .option('-m, --meeting <id>', 'Focus on a specific meeting ID')
-  .option('-p, --provider <name>', 'AI provider', 'gemini')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-m, --model <name>',    'Override model name')
+  .option('--meeting <id>',        'Focus on a specific meeting ID')
   .action(chatCommand);
+
+// ── drift ─────────────────────────────────────────────────────────────────────
+program
+  .command('drift [idA] [idB]')
+  .description('Compare two meetings and surface decision drift')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-m, --model <name>',    'Override model name')
+  .option('-l, --last <n>',        'Auto-compare the N most recent meetings')
+  .action(driftCommand);
+
+// ── watchdog ──────────────────────────────────────────────────────────────────
+program
+  .command('watchdog')
+  .description('Scan all meetings for recurring risks and ownerless tasks')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-m, --model <name>',    'Override model name')
+  .option('-t, --team <name>',     'Filter by team name or keyword')
+  .action(watchdogCommand);
 
 // ── init ──────────────────────────────────────────────────────────────────────
 program
   .command('init')
-  .description('Configure TeamPulse for your team')
+  .description('Setup wizard — configure API keys, default provider and skill')
   .action(initCommand);
 
 // ── history ───────────────────────────────────────────────────────────────────
@@ -75,30 +104,22 @@ program
   .option('-n, --limit <n>', 'Number of meetings to show', '10')
   .action(historyCommand);
 
-// ── drift ─────────────────────────────────────────────────────────────────────
-program
-  .command('drift [idA] [idB]')
-  .description('Compare two meetings and surface decision drift')
-  .option('-l, --last <n>', 'Auto-compare the N most recent meetings', '2')
-  .action(driftCommand);
-
-// ── watchdog ──────────────────────────────────────────────────────────────────
-program
-  .command('watchdog')
-  .description('Scan all meetings for recurring risks and ownerless tasks')
-  .option('-t, --team <name>', 'Filter by team name or keyword')
-  .action(watchdogCommand);
-
 program.addHelpText('after', `
-${chalk.dim('Examples:')}
-  ${chalk.cyan('teampulse analyze sprint-review.txt --provider claude')}
-  ${chalk.cyan('teampulse analyze meeting.txt --filter risk --title "Sprint 12"')}
-  ${chalk.cyan('teampulse analyze --watch ./transcripts/')}
-  ${chalk.cyan('teampulse batch ./meetings/ --since 2026-05-01 --filter task')}
-  ${chalk.cyan('teampulse batch ./meetings/ --provider openai --title "Q2 Review"')}
-  ${chalk.cyan('teampulse drift --last 2')}
-  ${chalk.cyan('teampulse watchdog --team growth')}
-  ${chalk.cyan('teampulse chat')}
+${chalk.bold('Providers:')}
+  ${chalk.cyan('gemini')}   free tier · aistudio.google.com/app/apikey
+  ${chalk.cyan('claude')}   paid      · console.anthropic.com
+  ${chalk.cyan('openai')}   paid      · platform.openai.com/api-keys
+
+${chalk.bold('Examples:')}
+  ${chalk.cyan('teampulse analyze sprint-review.txt')}
+  ${chalk.cyan('teampulse analyze meeting.txt --provider claude --skill developer')}
+  ${chalk.cyan('teampulse analyze meeting.txt --provider openai --model gpt-4o-mini')}
+  ${chalk.cyan('teampulse batch ./meetings/ --provider claude --since 2026-05-01')}
+  ${chalk.cyan('teampulse watch ./transcripts/ --provider openai')}
+  ${chalk.cyan('teampulse drift --last 2 --provider claude')}
+  ${chalk.cyan('teampulse watchdog --provider gemini --team growth')}
+  ${chalk.cyan('teampulse chat --provider claude')}
+  ${chalk.cyan('teampulse init')}
 `);
 
 program.parse();
