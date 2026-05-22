@@ -6,8 +6,8 @@ export function printBanner() {
   console.log(
     boxen(
       chalk.bold.cyan('TeamPulse') +
-      chalk.dim(' v0.1.0\n') +
-      chalk.dim('Meeting intelligence powered by Gemini'),
+      chalk.dim(' v0.2.0\n') +
+      chalk.dim('Meeting intelligence · Gemini · Claude · GPT-4'),
       {
         padding: { top: 0, bottom: 0, left: 2, right: 2 },
         borderStyle: 'round',

@@ -1,7 +1,7 @@
 import readline from 'readline';
 import chalk from 'chalk';
 import ora from 'ora';
-import { chatWithHistory } from '../services/gemini.js';
+import { callProvider, resolveProvider, getProviderLabel } from '../services/provider.js';
 import { getRecentContext, getMeetingById, initDB } from '../utils/memory.js';
 import { printAssistantResponse, printError, printInfo, printSuccess } from '../utils/ui.js';
 
@@ -22,13 +22,15 @@ const HELP_TEXT = `
 
 export async function chatCommand(options) {
   await initDB();
+  const { name: provName, model } = resolveProvider(options.provider || 'gemini', options.model);
+  const provLabel = getProviderLabel(provName, model);
 
   console.log(chalk.bold.cyan('\n  ╭─ Chat mode ──────────────────────────────────────────────╮'));
+  console.log(chalk.dim(`  │  ${provLabel.padEnd(57)}│`));
   console.log(chalk.dim('  │  Ask anything about your meeting history.                  │'));
   console.log(chalk.dim('  │  Type /help for commands, Ctrl+C to exit.                  │'));
   console.log(chalk.bold.cyan('  ╰─────────────────────────────────────────────────────────────╯\n'));
 
-  // Load context
   let meetingContext = await getRecentContext(5);
 
   if (options.meeting) {
@@ -48,7 +50,6 @@ export async function chatCommand(options) {
     printInfo(`Loaded ${meetingContext.length} meeting(s) into context`);
   }
 
-  // Conversation history (Gemini CLI pattern: keep full history in memory)
   const conversationHistory = [];
 
   const rl = readline.createInterface({
@@ -57,7 +58,6 @@ export async function chatCommand(options) {
     terminal: true
   });
 
-  // Guard against concurrent requests while Gemini is responding
   let processing = false;
 
   const prompt = () => {
@@ -68,7 +68,6 @@ export async function chatCommand(options) {
     const line = input.trim();
     if (!line) { prompt(); return; }
 
-    // ── Slash commands ─────────────────────────────────────────────────────
     if (line.startsWith('/')) {
       await handleSlashCommand(line, rl, meetingContext, conversationHistory, options);
       if (line === '/exit' || line === '/quit') return;
@@ -76,33 +75,29 @@ export async function chatCommand(options) {
       return;
     }
 
-    // Drop input while a request is already in flight
     if (processing) {
       process.stdout.write(chalk.dim('\n  (still thinking — please wait)\n'));
       prompt();
       return;
     }
 
-    // ── Regular chat message ───────────────────────────────────────────────
     processing = true;
     const spinner = ora({ text: chalk.dim('Thinking...'), color: 'cyan', indent: 2 }).start();
 
     try {
       const freshContext = await getRecentContext(5);
-      const response = await chatWithHistory(line, conversationHistory, freshContext);
+      const chatPrompt = buildChatPrompt(line, conversationHistory, freshContext);
+      const response = await callProvider(provName, model, chatPrompt, { temperature: 0.7 });
 
       spinner.stop();
       console.log('\n' + chalk.dim('  ─────────────────────────────────────────────────────────────'));
       printAssistantResponse(response);
       console.log(chalk.dim('  ─────────────────────────────────────────────────────────────'));
 
-      conversationHistory.push({ role: 'user', parts: [{ text: line }] });
-      conversationHistory.push({ role: 'model', parts: [{ text: response }] });
+      conversationHistory.push({ role: 'user', content: line });
+      conversationHistory.push({ role: 'assistant', content: response });
 
-      // Keep last 10 exchanges (20 turns) to avoid ballooning context
-      if (conversationHistory.length > 20) {
-        conversationHistory.splice(0, 2);
-      }
+      if (conversationHistory.length > 20) conversationHistory.splice(0, 2);
     } catch (err) {
       spinner.fail(chalk.red('Error'));
       printError(err.message);
@@ -127,6 +122,25 @@ export async function chatCommand(options) {
   prompt();
 }
 
+function buildChatPrompt(userMessage, history, meetingContext) {
+  const contextStr = JSON.stringify(meetingContext, null, 2);
+  const historyStr = history.map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`).join('\n');
+
+  return `You are TeamPulse, a meeting intelligence agent. You help teams understand their meeting history, track decisions, and follow through on commitments.
+
+Available meeting context:
+${contextStr}
+
+Conversation so far:
+${historyStr || '(no previous messages)'}
+
+Be concise and actionable. Use bullet points for lists. If asked to create tasks or summaries, format them clearly.
+Answer questions about decisions, risks, tasks, owners, and patterns across meetings.
+
+User: ${userMessage}
+Assistant:`;
+}
+
 async function handleSlashCommand(line, rl, meetingContext, conversationHistory, options) {
   const [cmd, ...args] = line.split(' ');
 
@@ -146,9 +160,10 @@ async function handleSlashCommand(line, rl, meetingContext, conversationHistory,
           const date = new Date(m.analyzedAt).toLocaleDateString();
           const tasks = m.analysis?.tasks?.length || 0;
           const decisions = m.analysis?.decisions?.length || 0;
+          const prov = m.provider ? chalk.dim(` · ${m.provider}`) : '';
           console.log(
             `  ${chalk.cyan(m.id)}\n` +
-            `  ${chalk.white(m.title)} ${chalk.dim(`(${date})`)} ` +
+            `  ${chalk.white(m.title)} ${chalk.dim(`(${date})`)}${prov} ` +
             `${chalk.dim(`· ${decisions} decisions · ${tasks} tasks`)}\n`
           );
         });

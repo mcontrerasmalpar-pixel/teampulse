@@ -1,7 +1,7 @@
 {
   "name": "teampulse",
-  "version": "0.1.0",
-  "description": "Terminal-first meeting intelligence agent powered by Gemini",
+  "version": "0.2.0",
+  "description": "Terminal-first meeting intelligence — Gemini · Claude · GPT-4",
   "type": "module",
   "bin": {
     "teampulse": "./src/index.js"
@@ -11,6 +11,7 @@
     "dev": "node --watch src/index.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
     "@google/generative-ai": "^0.21.0",
     "boxen": "^7.1.1",
     "chalk": "^5.3.0",
@@ -19,6 +20,7 @@
     "dotenv": "^16.4.5",
     "inquirer": "^9.3.6",
     "lowdb": "^7.0.1",
+    "openai": "^4.52.0",
     "ora": "^8.1.0"
   }
 }

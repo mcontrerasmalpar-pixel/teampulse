@@ -2,11 +2,58 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import ora from 'ora';
 import { getMeetingById, getMeetings, initDB } from '../utils/memory.js';
-import { compareMeetings } from '../services/gemini.js';
+import { callProvider, resolveProvider, getProviderLabel } from '../services/provider.js';
 import { printError, printInfo, printSection, printWarn } from '../utils/ui.js';
+
+function buildDriftPrompt(meetingA, meetingB) {
+  return `You are a meeting intelligence agent comparing two meeting records to detect decision drift and recurring issues.
+
+MEETING A (earlier): ${meetingA.title} (${meetingA.analyzedAt})
+${JSON.stringify(meetingA.analysis, null, 2)}
+
+MEETING B (later): ${meetingB.title} (${meetingB.analyzedAt})
+${JSON.stringify(meetingB.analysis, null, 2)}
+
+Analyze the two meetings and return ONLY valid JSON matching this schema:
+
+{
+  "driftItems": [
+    {
+      "topic": "string",
+      "meetingA": "string",
+      "meetingB": "string",
+      "driftScore": 0,
+      "driftType": "resolved | regressed | recurring | abandoned | new",
+      "observation": "string"
+    }
+  ],
+  "recurringBlockers": [
+    {
+      "description": "string",
+      "appearsIn": ["Meeting A title", "Meeting B title"],
+      "owner": "string or null",
+      "severity": "high | medium | low"
+    }
+  ],
+  "uncommittedOwners": [
+    {
+      "name": "string",
+      "committed": ["list of tasks/decisions they owned in meeting A"],
+      "followedUp": ["list of items showing progress in meeting B"],
+      "missedItems": ["list of items with no visible follow-through"]
+    }
+  ],
+  "overallDriftScore": 0,
+  "summary": "string - 2-3 sentence plain-language summary of the drift between these meetings"
+}
+
+driftScore 0 = fully resolved / healthy, 100 = completely stalled / regressed.
+overallDriftScore is the weighted average across all items.`;
+}
 
 export async function driftCommand(idA, idB, options) {
   await initDB();
+  const { name: provName, model } = resolveProvider(options.provider || 'gemini', options.model);
 
   let meetingA, meetingB;
 
@@ -22,7 +69,6 @@ export async function driftCommand(idA, idB, options) {
       printInfo(`Run ${chalk.cyan('teampulse analyze <file>')} to add meetings first.`);
       process.exit(1);
     }
-    // getMeetings returns newest-first; for drift we want older → newer
     meetingB = recent[0];
     meetingA = recent[n - 1] || recent[recent.length - 1];
   } else {
@@ -31,10 +77,7 @@ export async function driftCommand(idA, idB, options) {
       printInfo('Or use: teampulse drift --last 2');
       process.exit(1);
     }
-    [meetingA, meetingB] = await Promise.all([
-      getMeetingById(idA),
-      getMeetingById(idB)
-    ]);
+    [meetingA, meetingB] = await Promise.all([getMeetingById(idA), getMeetingById(idB)]);
     if (!meetingA) { printError(`Meeting not found: ${idA}`); process.exit(1); }
     if (!meetingB) { printError(`Meeting not found: ${idB}`); process.exit(1); }
   }
@@ -42,19 +85,28 @@ export async function driftCommand(idA, idB, options) {
   console.log('\n' + chalk.bold.cyan('  Decision Drift Analysis') + '\n');
   printInfo(`Comparing: ${chalk.white(meetingA.title)} → ${chalk.white(meetingB.title)}`);
 
-  const spinner = ora({ text: chalk.dim('Analyzing drift with Gemini...'), color: 'cyan', indent: 2 }).start();
+  const spinner = ora({
+    text: chalk.dim(`Analyzing drift via ${chalk.cyan(getProviderLabel(provName, model))}...`),
+    color: 'cyan', indent: 2
+  }).start();
 
   let drift;
   try {
-    drift = await compareMeetings(meetingA, meetingB);
-    spinner.succeed(chalk.green('Drift analysis complete'));
+    const raw = await callProvider(provName, model, buildDriftPrompt(meetingA, meetingB), { jsonMode: true });
+    try {
+      drift = JSON.parse(raw);
+    } catch {
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) drift = JSON.parse(match[0]);
+      else throw new Error('Invalid JSON returned for drift comparison.');
+    }
+    spinner.succeed(chalk.green(`Drift analysis complete · ${getProviderLabel(provName, model)}`));
   } catch (err) {
     spinner.fail(chalk.red('Drift analysis failed'));
     printError(err.message);
     process.exit(1);
   }
 
-  // ── Overall score ──────────────────────────────────────────────────────────
   const score = drift.overallDriftScore ?? 0;
   const scoreColor = score >= 70 ? 'red' : score >= 40 ? 'yellow' : 'green';
   console.log(
@@ -64,7 +116,6 @@ export async function driftCommand(idA, idB, options) {
 
   printSection('Summary', drift.summary || 'No summary generated.', 'white');
 
-  // ── Drift items table ──────────────────────────────────────────────────────
   if (drift.driftItems?.length) {
     console.log('\n' + chalk.cyan('  ── Decision & Task Drift ──'));
     const table = new Table({
@@ -74,40 +125,17 @@ export async function driftCommand(idA, idB, options) {
     });
 
     drift.driftItems.forEach(item => {
-      const typeColor = {
-        resolved: 'green',
-        regressed: 'red',
-        recurring: 'yellow',
-        abandoned: 'red',
-        new: 'dim'
-      }[item.driftType] || 'white';
-
+      const typeColor = { resolved: 'green', regressed: 'red', recurring: 'yellow', abandoned: 'red', new: 'dim' }[item.driftType] || 'white';
       const scoreVal = item.driftScore ?? 0;
-      const scoreStr = scoreVal >= 70
-        ? chalk.red(String(scoreVal))
-        : scoreVal >= 40
-          ? chalk.yellow(String(scoreVal))
-          : chalk.green(String(scoreVal));
-
-      table.push([
-        item.topic,
-        chalk.dim(item.meetingA || '—'),
-        chalk.dim(item.meetingB || '—'),
-        chalk[typeColor](item.driftType),
-        scoreStr
-      ]);
+      const scoreStr = scoreVal >= 70 ? chalk.red(String(scoreVal)) : scoreVal >= 40 ? chalk.yellow(String(scoreVal)) : chalk.green(String(scoreVal));
+      table.push([item.topic, chalk.dim(item.meetingA || '—'), chalk.dim(item.meetingB || '—'), chalk[typeColor](item.driftType), scoreStr]);
     });
-
     console.log(table.toString());
-
     drift.driftItems.forEach(item => {
-      if (item.observation) {
-        console.log(`  ${chalk.dim('›')} ${chalk.bold(item.topic)}: ${item.observation}`);
-      }
+      if (item.observation) console.log(`  ${chalk.dim('›')} ${chalk.bold(item.topic)}: ${item.observation}`);
     });
   }
 
-  // ── Recurring blockers ─────────────────────────────────────────────────────
   if (drift.recurringBlockers?.length) {
     printSection(`Recurring Blockers (${drift.recurringBlockers.length})`, '', 'red');
     drift.recurringBlockers.forEach(b => {
@@ -120,23 +148,19 @@ export async function driftCommand(idA, idB, options) {
     });
   }
 
-  // ── Uncommitted owners ────────────────────────────────────────────────────
   if (drift.uncommittedOwners?.length) {
     printSection('Ownership Follow-Through', '', 'yellow');
     drift.uncommittedOwners.forEach(o => {
       if (o.missedItems?.length) {
         console.log(`\n  ${chalk.bold(o.name)} — ${chalk.red(`${o.missedItems.length} missed commitment(s)`)}`);
         o.missedItems.forEach(item => console.log(`     ${chalk.dim('✗')} ${item}`));
-        if (o.followedUp?.length) {
-          o.followedUp.forEach(item => console.log(`     ${chalk.green('✓')} ${item}`));
-        }
+        if (o.followedUp?.length) o.followedUp.forEach(item => console.log(`     ${chalk.green('✓')} ${item}`));
       }
     });
   }
 
-  if (!drift.driftItems?.length && !drift.recurringBlockers?.length) {
+  if (!drift.driftItems?.length && !drift.recurringBlockers?.length)
     printInfo('No significant drift detected between these meetings.');
-  }
 
   console.log();
 }

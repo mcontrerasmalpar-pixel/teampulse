@@ -9,29 +9,60 @@ export async function initCommand() {
   await initDB();
 
   console.log('\n' + chalk.bold.cyan('  TeamPulse Setup Wizard') + '\n');
-  console.log(chalk.dim('  This will configure your TeamPulse environment.\n'));
+  console.log(chalk.dim('  Configure your AI providers and default preferences.\n'));
 
-  // Check for existing .env
   const envPath = join(process.cwd(), '.env');
   const hasEnv = existsSync(envPath);
-  let existingKey = '';
+  let existing = {};
   if (hasEnv) {
     const content = readFileSync(envPath, 'utf-8');
-    const match = content.match(/GEMINI_API_KEY=(.+)/);
-    if (match) existingKey = match[1].trim();
+    const parse = (key) => { const m = content.match(new RegExp(`${key}=(.+)`)); return m ? m[1].trim() : ''; };
+    existing = {
+      gemini: parse('GEMINI_API_KEY'),
+      anthropic: parse('ANTHROPIC_API_KEY'),
+      openai: parse('OPENAI_API_KEY'),
+      skill: parse('DEFAULT_SKILL'),
+      team: parse('TEAM_NAME'),
+    };
   }
 
-  const keyPrompt = existingKey
-    ? `GEMINI_API_KEY (current: ${existingKey.slice(0, 8)}...)`
-    : 'GEMINI_API_KEY (get free at aistudio.google.com/app/apikey)';
+  const maskKey = (k) => k ? `${k.slice(0, 8)}…` : '';
 
   const answers = await inquirer.prompt([
     {
+      type: 'list',
+      name: 'defaultProvider',
+      message: 'Default AI provider:',
+      choices: [
+        { name: 'Gemini (free tier available — aistudio.google.com)', value: 'gemini' },
+        { name: 'Claude (console.anthropic.com)', value: 'claude' },
+        { name: 'OpenAI / GPT-4 (platform.openai.com)', value: 'openai' },
+      ],
+      default: 'gemini'
+    },
+    {
       type: 'input',
-      name: 'apiKey',
-      message: keyPrompt,
-      default: existingKey || '',
-      validate: v => v.length > 10 || 'Please enter a valid API key'
+      name: 'geminiKey',
+      message: existing.gemini
+        ? `GEMINI_API_KEY (current: ${maskKey(existing.gemini)}  — leave blank to keep):`
+        : 'GEMINI_API_KEY (get free key at aistudio.google.com/app/apikey):',
+      default: existing.gemini || '',
+    },
+    {
+      type: 'input',
+      name: 'anthropicKey',
+      message: existing.anthropic
+        ? `ANTHROPIC_API_KEY (current: ${maskKey(existing.anthropic)}  — leave blank to keep):`
+        : 'ANTHROPIC_API_KEY (optional — leave blank to skip):',
+      default: existing.anthropic || '',
+    },
+    {
+      type: 'input',
+      name: 'openaiKey',
+      message: existing.openai
+        ? `OPENAI_API_KEY (current: ${maskKey(existing.openai)}  — leave blank to keep):`
+        : 'OPENAI_API_KEY (optional — leave blank to skip):',
+      default: existing.openai || '',
     },
     {
       type: 'list',
@@ -42,13 +73,14 @@ export async function initCommand() {
         { name: 'Developer — technical decisions, blockers, debt', value: 'developer' },
         { name: 'Founder — strategy, resources, alignment', value: 'founder' },
         { name: 'Marketing — campaigns, messaging, launches', value: 'marketing' }
-      ]
+      ],
+      default: existing.skill || 'product-manager'
     },
     {
       type: 'input',
       name: 'teamName',
       message: 'Team name (optional, used in reports):',
-      default: ''
+      default: existing.team || ''
     },
     {
       type: 'confirm',
@@ -58,23 +90,25 @@ export async function initCommand() {
     }
   ]);
 
-  const { apiKey, defaultSkill, teamName, confirmed } = answers;
+  const { defaultProvider, geminiKey, anthropicKey, openaiKey, defaultSkill, teamName, confirmed } = answers;
 
   if (!confirmed) {
     printWarn('Setup cancelled. No changes saved.');
     return;
   }
 
-  // Write .env
-  const envLines = [
-    `GEMINI_API_KEY=${apiKey}`,
+  const lines = [
+    geminiKey    ? `GEMINI_API_KEY=${geminiKey}` : null,
+    anthropicKey ? `ANTHROPIC_API_KEY=${anthropicKey}` : null,
+    openaiKey    ? `OPENAI_API_KEY=${openaiKey}` : null,
+    `DEFAULT_PROVIDER=${defaultProvider}`,
     `DEFAULT_SKILL=${defaultSkill}`,
-    teamName ? `TEAM_NAME=${teamName}` : null,
+    teamName     ? `TEAM_NAME=${teamName}` : null,
     'NODE_ENV=development'
   ].filter(Boolean).join('\n') + '\n';
 
   try {
-    writeFileSync(envPath, envLines, 'utf-8');
+    writeFileSync(envPath, lines, 'utf-8');
     printSuccess('.env file written');
   } catch (err) {
     printError(`Could not write .env: ${err.message}`);
@@ -82,7 +116,8 @@ export async function initCommand() {
   }
 
   console.log('\n' + chalk.bold('  Setup complete!\n'));
-  printInfo(`Default skill: ${chalk.cyan(defaultSkill)}`);
+  printInfo(`Default provider: ${chalk.cyan(defaultProvider)}`);
+  printInfo(`Default skill:    ${chalk.cyan(defaultSkill)}`);
   printInfo(`Memory stored at: ${chalk.dim('~/.teampulse/memory.json')}`);
   console.log('\n  ' + chalk.dim('Next steps:'));
   console.log('  ' + chalk.cyan('teampulse analyze <your-transcript.txt>'));
