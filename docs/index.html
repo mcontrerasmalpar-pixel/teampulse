@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TeamPulse — Meeting Intelligence for the Terminal</title>
-  <meta name="description" content="TeamPulse reads your meeting transcripts and extracts decisions, tasks, risks, and owners using Gemini, Claude, or GPT-4 — right in your terminal." />
+  <meta name="description" content="TeamPulse reads your meeting transcripts and extracts decisions, tasks, risks, and owners using Gemini, Claude, GPT-4, Mistral, or Ollama — right in your terminal." />
   <meta property="og:title" content="TeamPulse — Meeting Intelligence for the Terminal" />
-  <meta property="og:description" content="Stop re-discussing. Start shipping." />
+  <meta property="og:description" content="Stop re-discussing. Start shipping. Multi-provider: cloud or fully local with Mistral & Ollama." />
   <meta property="og:type" content="website" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,6 +33,8 @@
       --yellow:      #F5A623;
       --red:         #E8542A;
       --blue:        #4D9EFF;
+      --purple:      #A78BFA;
+      --teal:        #2DD4BF;
       --font-mono:   'JetBrains Mono', 'Cascadia Code', monospace;
       --font-sans:   'Inter', system-ui, sans-serif;
       --radius:      10px;
@@ -193,6 +195,37 @@
     }
     .hero-meta-item span:first-child { color: var(--green); }
 
+    /* ── Provider pills in hero ── */
+    .hero-providers {
+      display: flex; align-items: center; gap: .5rem;
+      flex-wrap: wrap; margin-bottom: 2rem;
+    }
+    .hero-providers-label {
+      font-size: .72rem; color: var(--text-3);
+      font-family: var(--font-mono); margin-right: .25rem;
+    }
+    .provider-pill {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .22rem .7rem;
+      border-radius: 100px;
+      font-size: .68rem; font-weight: 600;
+      font-family: var(--font-mono);
+      border: 1px solid var(--border-2);
+      background: var(--surface);
+      color: var(--text-2);
+      transition: border-color .15s, color .15s;
+    }
+    .provider-pill:hover { border-color: var(--text-3); color: var(--text); }
+    .provider-pill.local {
+      border-color: rgba(45,212,191,.3);
+      background: rgba(45,212,191,.06);
+      color: var(--teal);
+    }
+    .provider-pill .pill-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; opacity: .7;
+    }
+
     /* ── Gradient grid background ── */
     .hero-right { position: relative; }
     .hero-right::before {
@@ -262,6 +295,8 @@
     .t-yellow { color: var(--yellow); }
     .t-red    { color: var(--red); }
     .t-blue   { color: var(--blue); }
+    .t-teal   { color: var(--teal); }
+    .t-purple { color: var(--purple); }
     .t-bold   { font-weight: 700; }
 
     /* AI reasoning */
@@ -351,7 +386,7 @@
     #providers { background: var(--bg); }
     .providers-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 1.25rem;
     }
     .provider-card {
@@ -371,6 +406,15 @@
       background: linear-gradient(135deg, var(--bg-2) 0%, rgba(232,84,42,.05) 100%);
       box-shadow: 0 0 0 1px rgba(232,84,42,.1), inset 0 1px 0 rgba(232,84,42,.08);
     }
+    .provider-card.local-provider {
+      border-color: rgba(45,212,191,.25);
+      background: linear-gradient(135deg, var(--bg-2) 0%, rgba(45,212,191,.04) 100%);
+      box-shadow: 0 0 0 1px rgba(45,212,191,.08), inset 0 1px 0 rgba(45,212,191,.05);
+    }
+    .provider-card.local-provider:hover {
+      border-color: rgba(45,212,191,.45);
+      box-shadow: 0 16px 40px rgba(0,0,0,.4), 0 0 20px rgba(45,212,191,.08);
+    }
     .provider-header {
       display: flex; align-items: center; gap: .75rem; margin-bottom: .9rem;
     }
@@ -382,6 +426,11 @@
       text-transform: uppercase; padding: .18rem .55rem;
       border-radius: 4px; background: var(--accent); color: #fff;
     }
+    .provider-badge.local-badge {
+      background: rgba(45,212,191,.15);
+      border: 1px solid rgba(45,212,191,.4);
+      color: var(--teal);
+    }
     .provider-card p { font-size: .83rem; color: var(--text-2); line-height: 1.65; margin-bottom: 1rem; }
     .provider-models { display: flex; flex-wrap: wrap; gap: .4rem; }
     .model-tag {
@@ -389,6 +438,31 @@
       padding: .22rem .6rem; border-radius: 4px;
       background: var(--surface); border: 1px solid var(--border);
       color: var(--text-3);
+    }
+    .model-tag.local-tag {
+      background: rgba(45,212,191,.06);
+      border-color: rgba(45,212,191,.2);
+      color: var(--teal);
+    }
+
+    /* ── Local callout banner ── */
+    .local-callout {
+      margin-bottom: 2.5rem;
+      padding: 1rem 1.5rem;
+      background: rgba(45,212,191,.05);
+      border: 1px solid rgba(45,212,191,.2);
+      border-radius: var(--radius-lg);
+      display: flex; align-items: center; gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .local-callout-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .local-callout-text { flex: 1; }
+    .local-callout-title { font-size: .85rem; font-weight: 700; color: var(--teal); margin-bottom: .2rem; }
+    .local-callout-desc { font-size: .8rem; color: var(--text-2); line-height: 1.5; }
+    .local-callout code {
+      font-family: var(--font-mono); font-size: .75rem;
+      color: var(--teal); background: rgba(45,212,191,.08);
+      padding: .1rem .35rem; border-radius: 3px;
     }
 
     /* ── CLI Commands ── */
@@ -416,6 +490,7 @@
       background: var(--surface-2); color: var(--text-3);
       border: 1px solid var(--border);
     }
+    .cmd-badge.local { background: rgba(45,212,191,.08); color: var(--teal); border-color: rgba(45,212,191,.25); }
     .cmd-body {
       padding: 1rem 1.25rem;
       font-family: var(--font-mono); font-size: .73rem;
@@ -500,6 +575,7 @@
     .stat-val.ok   { color: var(--green); }
     .stat-val.warn { color: var(--yellow); }
     .stat-val.bad  { color: var(--red); }
+    .stat-val.local { color: var(--teal); }
     .drift-bar  { height: 5px; border-radius: 3px; background: var(--bg-3); overflow: hidden; margin-top: .5rem; }
     .drift-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--green), var(--yellow)); }
 
@@ -565,6 +641,11 @@
       font-size: .73rem; color: var(--text-2); line-height: 1.5;
     }
     .install-note strong { color: var(--accent-2); }
+    .install-note.local-note {
+      background: rgba(45,212,191,.05);
+      border-color: rgba(45,212,191,.2);
+    }
+    .install-note.local-note strong { color: var(--teal); }
 
     /* ── CTA ── */
     .cta-section {
@@ -642,9 +723,17 @@
 <section style="padding:0">
   <div class="hero">
     <div class="hero-left">
-      <div class="hero-eyebrow">⚡ v0.2.0 · multi-provider · terminal-first</div>
+      <div class="hero-eyebrow">⚡ v0.2.0 · 5 providers · cloud + local</div>
       <h1>Your meetings.<br>Finally <em>actionable</em>.</h1>
-      <p>TeamPulse reads your Google Meet transcripts and extracts decisions, tasks, risks, and owners using Gemini, Claude, or GPT-4 — right in your terminal. Tracks drift so nothing slips.</p>
+      <p>TeamPulse reads your Google Meet transcripts and extracts decisions, tasks, risks, and owners — right in your terminal. Choose your AI: cloud or fully local with Mistral & Ollama.</p>
+      <div class="hero-providers">
+        <span class="hero-providers-label">works with</span>
+        <span class="provider-pill"><span class="pill-dot"></span>Gemini</span>
+        <span class="provider-pill"><span class="pill-dot"></span>Claude</span>
+        <span class="provider-pill"><span class="pill-dot"></span>GPT-4</span>
+        <span class="provider-pill local"><span class="pill-dot"></span>Mistral</span>
+        <span class="provider-pill local"><span class="pill-dot"></span>Ollama</span>
+      </div>
       <div class="hero-actions">
         <a href="#install" class="btn btn-primary">→ Get Started</a>
         <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-ghost" target="_blank">View Source</a>
@@ -666,7 +755,7 @@
         <div class="tab-bar">
           <div class="tab active" data-target="tab-ai">AI Reasoning</div>
           <div class="tab" data-target="tab-analyze">analyze</div>
-          <div class="tab" data-target="tab-watch">--watch</div>
+          <div class="tab" data-target="tab-local">--local</div>
           <div class="tab" data-target="tab-batch">batch</div>
         </div>
         <div class="terminal-body">
@@ -714,12 +803,19 @@
             <div class="t-dim">──────────────────────────────────────</div>
             <div>› API rate limits on free tier <span class="t-dim">[unresolved]</span></div>
           </div>
-          <div class="tab-panel" id="tab-watch">
-            <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse analyze --watch ./transcripts/</span></div>
-            <div class="t-dim" style="margin:.3rem 0 .7rem 1.1rem">👁  Watching for new transcripts… (Ctrl+C to stop)</div>
-            <div><span class="t-green">▶</span> <span class="t-dim">sprint-planning.txt</span> → <span class="t-green t-bold">4d · 6t · 1r</span></div>
-            <div><span class="t-green">▶</span> <span class="t-dim">design-review.txt</span>  → <span class="t-green t-bold">2d · 3t · 0r</span></div>
-            <div><span class="t-yellow">⟳</span> <span class="t-dim">waiting…</span></div>
+          <div class="tab-panel" id="tab-local">
+            <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse analyze meeting.txt <span class="t-teal">--provider ollama --model mistral</span></span></div>
+            <div class="t-dim" style="margin:.3rem 0 .7rem 1.1rem">🏠 Running locally via Ollama · mistral:latest</div>
+            <div class="t-teal">● No API key needed · 100% offline</div>
+            <br>
+            <div><span class="t-green t-bold">✓</span> <span class="t-bold">2 decisions</span> · <span class="t-bold">4 tasks</span> · <span class="t-bold">1 risk</span></div>
+            <br>
+            <div><span class="t-teal t-bold">LOCAL PROVIDERS</span></div>
+            <div class="t-dim">──────────────────────────────────────</div>
+            <div><span class="t-teal">›</span> <span class="t-bold">ollama</span>   <span class="t-dim">→ --model mistral / llama3 / phi3</span></div>
+            <div><span class="t-teal">›</span> <span class="t-bold">mistral</span>  <span class="t-dim">→ API · mistral-large / mixtral-8x7b</span></div>
+            <br>
+            <div class="t-dim">Tip: run <span class="t-teal">ollama pull mistral</span> to get started</div>
           </div>
           <div class="tab-panel" id="tab-batch">
             <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse batch ./transcripts/ --since 2026-05-01 --filter risk</span></div>
@@ -752,7 +848,7 @@
       <div class="feat-card"><div class="feat-icon">✅</div><h3>Task detection</h3><p>Finds action items, assigns owners from context, and flags missing deadlines.</p></div>
       <div class="feat-card"><div class="feat-icon">⚠️</div><h3>Risk identification</h3><p>Surfaces blockers and risks — even when they're not explicitly labeled as such.</p></div>
       <div class="feat-card"><div class="feat-icon">📈</div><h3>Drift tracking</h3><p>Compares meeting-to-meeting to detect topic drift and recurring blockers.</p></div>
-      <div class="feat-card"><div class="feat-icon">👁</div><h3>--watch mode</h3><p>Monitor a folder for new transcripts and get instant analysis as meetings finish.</p></div>
+      <div class="feat-card"><div class="feat-icon">🏠</div><h3>Fully local mode</h3><p>Run analysis 100% offline with Ollama. No API keys, no data leaving your machine.</p></div>
       <div class="feat-card"><div class="feat-icon">📦</div><h3>Batch processing</h3><p>Run analysis across dozens of files with <code style="font-family:var(--font-mono);font-size:.85em">--since</code>, <code style="font-family:var(--font-mono);font-size:.85em">--filter</code>, and <code style="font-family:var(--font-mono);font-size:.85em">--title</code>.</p></div>
     </div>
   </div>
@@ -763,7 +859,16 @@
   <div class="section-inner">
     <p class="section-eyebrow">AI Providers</p>
     <h2 class="section-title">Your model, your choice</h2>
-    <p class="section-sub">Switch providers with a single flag — no code changes, no config rewrite.</p>
+    <p class="section-sub">Switch providers with a single flag — cloud or fully local. No code changes, no config rewrite.</p>
+
+    <div class="local-callout">
+      <span class="local-callout-icon">🏠</span>
+      <div class="local-callout-text">
+        <div class="local-callout-title">New in v0.2.0 — Local providers</div>
+        <div class="local-callout-desc">Run TeamPulse completely offline with <code>--provider ollama</code> or <code>--provider mistral</code>. No API key required for Ollama — just <code>ollama pull mistral</code> and you're set.</div>
+      </div>
+    </div>
+
     <div class="providers-grid">
       <div class="provider-card featured">
         <div class="provider-header">
@@ -802,6 +907,34 @@
           <span class="model-tag">gpt-4-turbo</span>
         </div>
       </div>
+      <div class="provider-card local-provider">
+        <div class="provider-header">
+          <span class="provider-icon">🌬️</span>
+          <span class="provider-name">Mistral AI</span>
+          <span class="provider-badge local-badge">Local-first</span>
+        </div>
+        <p>Fast, efficient, and open-weight. Run via Mistral API or fully offline through Ollama.</p>
+        <div class="provider-models">
+          <span class="model-tag local-tag">mistral-large</span>
+          <span class="model-tag local-tag">mixtral-8x7b</span>
+          <span class="model-tag local-tag">mistral-7b</span>
+        </div>
+      </div>
+      <div class="provider-card local-provider">
+        <div class="provider-header">
+          <span class="provider-icon">🦙</span>
+          <span class="provider-name">Ollama</span>
+          <span class="provider-badge local-badge">100% Offline</span>
+        </div>
+        <p>Run any supported model on your own hardware. Zero data leaves your machine — ideal for sensitive meeting content.</p>
+        <div class="provider-models">
+          <span class="model-tag local-tag">mistral</span>
+          <span class="model-tag local-tag">llama3</span>
+          <span class="model-tag local-tag">phi3</span>
+          <span class="model-tag local-tag">gemma2</span>
+          <span class="model-tag local-tag">qwen2</span>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -814,11 +947,11 @@
     <p class="section-sub">Every command designed for real workflows — pipe, script, automate.</p>
     <div class="commands-grid">
       <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">teampulse analyze</span><span class="cmd-badge">single file</span></div><div class="cmd-body">Analyze a single transcript and print structured results.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze meeting.txt</div></div></div>
-      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--provider</span><span class="cmd-badge">AI model</span></div><div class="cmd-body">Switch AI provider without changing config.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze m.txt --provider claude</div></div></div>
+      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--provider</span><span class="cmd-badge">AI model</span></div><div class="cmd-body">Switch AI provider without changing config. Supports gemini · claude · openai · mistral · ollama.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze m.txt --provider mistral</div></div></div>
+      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--provider ollama</span><span class="cmd-badge local">offline</span></div><div class="cmd-body">Run fully locally via Ollama. No API key needed. Use <code style="color:var(--teal)">--model</code> to pick the model.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze m.txt --provider ollama --model llama3</div></div></div>
       <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--watch</span><span class="cmd-badge">live mode</span></div><div class="cmd-body">Watch a folder and auto-analyze new transcripts.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze --watch ./meetings/</div></div></div>
       <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">batch + --since</span><span class="cmd-badge">date filter</span></div><div class="cmd-body">Process all transcripts since a date.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse batch ./ --since 2026-05-01</div></div></div>
       <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--filter</span><span class="cmd-badge">type filter</span></div><div class="cmd-body">Show only a specific insight type: risk · task · decision.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse batch ./ --filter risk</div></div></div>
-      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--title</span><span class="cmd-badge">label</span></div><div class="cmd-body">Tag your analysis with a custom label for reports.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze m.txt --title "Sprint 12"</div></div></div>
     </div>
   </div>
 </section>
@@ -840,7 +973,7 @@
         <div class="app-body">
           <div class="app-panel active" id="app-tab-insights">
             <div class="meeting-header">
-              <div><div class="meeting-title">Sprint Planning — May 22</div><div class="meeting-meta">47 min · 5 participants · gemini-2.0-flash</div></div>
+              <div><div class="meeting-title">Sprint Planning — May 22</div><div class="meeting-meta">47 min · 5 participants · ollama/mistral</div></div>
               <div class="score-badge"><span class="score-num">84</span><span class="score-lbl">Score</span></div>
             </div>
             <div class="insight-list">
@@ -870,8 +1003,8 @@
           <div class="sidebar-stat"><span class="stat-label">Tasks</span><span class="stat-val ok">5</span></div>
           <div class="sidebar-stat"><span class="stat-label">Risks</span><span class="stat-val warn">2</span></div>
           <div class="sidebar-stat"><span class="stat-label">Blockers</span><span class="stat-val bad">1</span></div>
-          <div class="sidebar-stat"><span class="stat-label">Model</span><span class="stat-val" style="color:var(--text-3)">gemini-2.0-flash</span></div>
-          <div class="sidebar-stat"><span class="stat-label">Latency</span><span class="stat-val ok">1.3s</span></div>
+          <div class="sidebar-stat"><span class="stat-label">Provider</span><span class="stat-val local">ollama/mistral</span></div>
+          <div class="sidebar-stat"><span class="stat-label">Latency</span><span class="stat-val ok">2.1s</span></div>
           <div style="margin-top:.75rem">
             <div class="sidebar-label">Drift Score</div>
             <div class="drift-bar"><div class="drift-fill" style="width:62%"></div></div>
@@ -884,7 +1017,13 @@
           <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.75rem">Multi-provider</div>
           <div style="font-size:.85rem;color:var(--text);font-weight:700;margin-bottom:.4rem">Switch models on the fly</div>
           <div style="font-size:.78rem;color:var(--text-2);line-height:1.6;margin-bottom:1rem">No config file changes. Just pass <code style="font-family:var(--font-mono);color:var(--accent-2)">--provider</code> and go.</div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;font-family:var(--font-mono);font-size:.7rem;color:var(--text-2)"><span style="color:var(--accent-2)">❯</span> teampulse analyze m.txt <span style="color:var(--green)">--provider openai</span></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;font-family:var(--font-mono);font-size:.7rem;color:var(--text-2)"><span style="color:var(--accent-2)">❯</span> teampulse analyze m.txt <span style="color:var(--teal)">--provider ollama --model mistral</span></div>
+        </div>
+        <div style="background:var(--bg-2);border:1px solid rgba(45,212,191,.2);border-radius:var(--radius-lg);padding:1.5rem;background:linear-gradient(135deg,var(--bg-2) 0%,rgba(45,212,191,.04) 100%)">
+          <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--teal);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.75rem">🏠 Fully offline</div>
+          <div style="font-size:.85rem;color:var(--text);font-weight:700;margin-bottom:.4rem">Zero data leaves your machine</div>
+          <div style="font-size:.78rem;color:var(--text-2);line-height:1.6;margin-bottom:.85rem">With Ollama, transcripts are processed entirely on your hardware. Perfect for sensitive team discussions.</div>
+          <div style="background:var(--surface);border:1px solid rgba(45,212,191,.2);border-radius:6px;padding:.6rem .9rem;font-family:var(--font-mono);font-size:.7rem;color:var(--text-2)"><span style="color:var(--teal)">❯</span> ollama pull mistral</div>
         </div>
         <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem">
           <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.75rem">Privacy first</div>
@@ -908,9 +1047,9 @@
         <div class="install-steps">
           <div class="install-step"><div class="install-step-num">1</div><div class="install-step-content"><div class="install-step-title">Verify Node.js 18+</div><div class="install-step-desc">Make sure you have Node.js 18 or higher.</div><div class="code-block"><code>node --version</code><button class="copy-btn" onclick="copyCode(this,'node --version')">Copy</button></div></div></div>
           <div class="install-step"><div class="install-step-num">2</div><div class="install-step-content"><div class="install-step-title">Clone &amp; install</div><div class="install-step-desc">Clone the repo and install dependencies.</div><div class="code-block" style="margin-bottom:.4rem"><code>git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git</code><button class="copy-btn" onclick="copyCode(this,'git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git')">Copy</button></div><div class="code-block"><code>cd teampulse &amp;&amp; npm install</code><button class="copy-btn" onclick="copyCode(this,'cd teampulse && npm install')">Copy</button></div></div></div>
-          <div class="install-step"><div class="install-step-num">3</div><div class="install-step-content"><div class="install-step-title">Configure API keys</div><div class="install-step-desc">Copy the env file and add your key.</div><div class="code-block" style="margin-bottom:.4rem"><code>cp .env.example .env</code><button class="copy-btn" onclick="copyCode(this,'cp .env.example .env')">Copy</button></div><div class="install-note">Set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, or <strong>OPENAI_API_KEY</strong> in <strong>.env</strong></div></div></div>
-          <div class="install-step"><div class="install-step-num">4</div><div class="install-step-content"><div class="install-step-title">Link globally</div><div class="install-step-desc">Make <code style="font-family:var(--font-mono)">teampulse</code> available system-wide.</div><div class="code-block"><code>npm link</code><button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button></div></div></div>
-          <div class="install-step"><div class="install-step-num">5</div><div class="install-step-content"><div class="install-step-title">First analysis</div><div class="install-step-desc">Drop a transcript in data/ and analyze it.</div><div class="code-block"><code>teampulse analyze data/sample.txt</code><button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt')">Copy</button></div></div></div>
+          <div class="install-step"><div class="install-step-num">3</div><div class="install-step-content"><div class="install-step-title">Configure API keys</div><div class="install-step-desc">Copy the env file and add your key. Skip this step if using Ollama locally.</div><div class="code-block" style="margin-bottom:.4rem"><code>cp .env.example .env</code><button class="copy-btn" onclick="copyCode(this,'cp .env.example .env')">Copy</button></div><div class="install-note">Set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, <strong>OPENAI_API_KEY</strong>, or <strong>MISTRAL_API_KEY</strong> in <strong>.env</strong></div></div></div>
+          <div class="install-step"><div class="install-step-num">4</div><div class="install-step-content"><div class="install-step-title">Optional: install Ollama</div><div class="install-step-desc">For fully offline analysis — no API key needed.</div><div class="code-block" style="margin-bottom:.4rem"><code>brew install ollama</code><button class="copy-btn" onclick="copyCode(this,'brew install ollama')">Copy</button></div><div class="code-block"><code>ollama pull mistral</code><button class="copy-btn" onclick="copyCode(this,'ollama pull mistral')">Copy</button></div><div class="install-note local-note"><strong>Offline mode:</strong> once pulled, works without internet</div></div></div>
+          <div class="install-step"><div class="install-step-num">5</div><div class="install-step-content"><div class="install-step-title">Link globally &amp; analyze</div><div class="install-step-desc">Make <code style="font-family:var(--font-mono)">teampulse</code> available system-wide, then run your first analysis.</div><div class="code-block" style="margin-bottom:.4rem"><code>npm link</code><button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button></div><div class="code-block"><code>teampulse analyze data/sample.txt --provider ollama</code><button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt --provider ollama')">Copy</button></div></div></div>
         </div>
       </div>
       <div class="install-os">
@@ -918,9 +1057,9 @@
         <div class="install-steps">
           <div class="install-step"><div class="install-step-num">1</div><div class="install-step-content"><div class="install-step-title">Verify Node.js 18+</div><div class="install-step-desc">Open PowerShell and check your Node version.</div><div class="code-block"><code>node --version</code><button class="copy-btn" onclick="copyCode(this,'node --version')">Copy</button></div></div></div>
           <div class="install-step"><div class="install-step-num">2</div><div class="install-step-content"><div class="install-step-title">Clone &amp; install</div><div class="install-step-desc">Clone the repo and install dependencies.</div><div class="code-block" style="margin-bottom:.4rem"><code>git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git</code><button class="copy-btn" onclick="copyCode(this,'git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git')">Copy</button></div><div class="code-block"><code>cd teampulse; npm install</code><button class="copy-btn" onclick="copyCode(this,'cd teampulse; npm install')">Copy</button></div></div></div>
-          <div class="install-step"><div class="install-step-num">3</div><div class="install-step-content"><div class="install-step-title">Configure API keys</div><div class="install-step-desc">Copy the env file and add your key.</div><div class="code-block" style="margin-bottom:.4rem"><code>Copy-Item .env.example .env</code><button class="copy-btn" onclick="copyCode(this,'Copy-Item .env.example .env')">Copy</button></div><div class="install-note">Set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, or <strong>OPENAI_API_KEY</strong> in <strong>.env</strong></div></div></div>
-          <div class="install-step"><div class="install-step-num">4</div><div class="install-step-content"><div class="install-step-title">Link globally</div><div class="install-step-desc">Make <code style="font-family:var(--font-mono)">teampulse</code> available system-wide.</div><div class="code-block"><code>npm link</code><button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button></div></div></div>
-          <div class="install-step"><div class="install-step-num">5</div><div class="install-step-content"><div class="install-step-title">First analysis</div><div class="install-step-desc">Drop a transcript in data/ and analyze it.</div><div class="code-block"><code>teampulse analyze data/sample.txt</code><button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt')">Copy</button></div></div></div>
+          <div class="install-step"><div class="install-step-num">3</div><div class="install-step-content"><div class="install-step-title">Configure API keys</div><div class="install-step-desc">Copy the env file and add your key. Skip if using Ollama.</div><div class="code-block" style="margin-bottom:.4rem"><code>Copy-Item .env.example .env</code><button class="copy-btn" onclick="copyCode(this,'Copy-Item .env.example .env')">Copy</button></div><div class="install-note">Set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, <strong>OPENAI_API_KEY</strong>, or <strong>MISTRAL_API_KEY</strong> in <strong>.env</strong></div></div></div>
+          <div class="install-step"><div class="install-step-num">4</div><div class="install-step-content"><div class="install-step-title">Optional: install Ollama</div><div class="install-step-desc">Download from <a href="https://ollama.com" target="_blank" style="color:var(--teal)">ollama.com</a> and pull a model.</div><div class="code-block"><code>ollama pull mistral</code><button class="copy-btn" onclick="copyCode(this,'ollama pull mistral')">Copy</button></div><div class="install-note local-note"><strong>Offline mode:</strong> works without internet once pulled</div></div></div>
+          <div class="install-step"><div class="install-step-num">5</div><div class="install-step-content"><div class="install-step-title">Link globally &amp; analyze</div><div class="install-step-desc">Make <code style="font-family:var(--font-mono)">teampulse</code> available system-wide, then analyze.</div><div class="code-block" style="margin-bottom:.4rem"><code>npm link</code><button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button></div><div class="code-block"><code>teampulse analyze data/sample.txt --provider ollama</code><button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt --provider ollama')">Copy</button></div></div></div>
         </div>
       </div>
     </div>
@@ -930,7 +1069,7 @@
 <!-- CTA -->
 <div class="cta-section">
   <h2 class="cta-title">Stop re-discussing.<br>Start shipping.</h2>
-  <p class="cta-sub">TeamPulse keeps every decision, task, and risk in check — across every meeting, every week.</p>
+  <p class="cta-sub">TeamPulse keeps every decision, task, and risk in check — across every meeting, every week. Cloud or local, your call.</p>
   <div class="cta-actions">
     <a href="#install" class="btn btn-primary">→ Install TeamPulse</a>
     <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-ghost" target="_blank">View on GitHub</a>
@@ -943,9 +1082,10 @@
   <div class="footer-links">
     <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">GitHub</a>
     <a href="#features">Features</a>
+    <a href="#providers">Providers</a>
     <a href="#install">Install</a>
   </div>
-  <p>Built for async teams · v0.2.0</p>
+  <p>Built for async teams · v0.2.0 · 5 providers</p>
 </footer>
 
 <script>
