@@ -3,6 +3,8 @@ import 'dotenv/config';
 import { program } from 'commander';
 import chalk from 'chalk';
 import { analyzeCommand } from './commands/analyze.js';
+import { batchCommand } from './commands/batch.js';
+import { watchCommand } from './commands/watch.js';
 import { chatCommand } from './commands/chat.js';
 import { initCommand } from './commands/init.js';
 import { historyCommand } from './commands/history.js';
@@ -14,60 +16,89 @@ printBanner();
 
 program
   .name('teampulse')
-  .description('Terminal-first meeting intelligence agent powered by Gemini')
-  .version('0.1.0');
+  .description('Terminal-first meeting intelligence — Gemini · Claude · GPT-4')
+  .version('0.2.0');
 
-// ── Command mode (deterministic, scriptable) ─────────────────────────────────
+// ── analyze ───────────────────────────────────────────────────────────────────
 program
-  .command('analyze <file>')
-  .description('Analyze a Google Meet transcript or .txt meeting file')
-  .option('-s, --skill <skill>', 'Role skill: product-manager | developer | founder | marketing', 'product-manager')
+  .command('analyze [file]')
+  .description('Analyze a transcript file (or watch a folder with --watch)')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-m, --model <name>',    'Override model name (e.g. gpt-4o-mini)')
+  .option('-s, --skill <skill>',   'Role skill: product-manager | developer | founder | marketing', 'product-manager')
   .option('-f, --format <format>', 'Output format: plain | json | markdown', 'plain')
-  .option('-o, --output <file>', 'Save output to file')
-  .action(analyzeCommand);
+  .option('-o, --output <file>',   'Save output to file')
+  .option('--filter <type>',       'Show only: decision | task | risk')
+  .option('--title <label>',       'Label this analysis run')
+  .option('--watch [dir]',         'Watch a folder for new transcripts')
+  .action((file, opts) => {
+    if (opts.watch) {
+      const dir = typeof opts.watch === 'string' ? opts.watch : (file || '.');
+      return watchCommand(dir, opts);
+    }
+    if (!file) {
+      console.error(chalk.red('✗ Provide a file path or use --watch <dir>'));
+      process.exit(1);
+    }
+    return analyzeCommand(file, opts);
+  });
 
-// ── Chat / REPL mode (interactive, conversational) ───────────────────────────
+// ── batch ─────────────────────────────────────────────────────────────────────
+program
+  .command('batch [dir]')
+  .description('Analyze all transcripts in a directory')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-m, --model <name>',    'Override model name')
+  .option('--since <date>',        'Only files modified after this date (YYYY-MM-DD)')
+  .option('--filter <type>',       'Show only: decision | task | risk')
+  .option('--title <label>',       'Label this batch run')
+  .action(batchCommand);
+
+// ── chat ──────────────────────────────────────────────────────────────────────
 program
   .command('chat')
-  .description('Start interactive REPL over your meeting history')
+  .description('Interactive REPL over your meeting history')
   .option('-m, --meeting <id>', 'Focus on a specific meeting ID')
+  .option('-p, --provider <name>', 'AI provider', 'gemini')
   .action(chatCommand);
 
-// ── Setup wizard ─────────────────────────────────────────────────────────────
+// ── init ──────────────────────────────────────────────────────────────────────
 program
   .command('init')
   .description('Configure TeamPulse for your team')
   .action(initCommand);
 
-// ── History browser ──────────────────────────────────────────────────────────
+// ── history ───────────────────────────────────────────────────────────────────
 program
   .command('history')
   .description('List analyzed meetings stored in memory')
   .option('-n, --limit <n>', 'Number of meetings to show', '10')
   .action(historyCommand);
 
-// ── Decision drift detection ──────────────────────────────────────────────────
+// ── drift ─────────────────────────────────────────────────────────────────────
 program
   .command('drift [idA] [idB]')
   .description('Compare two meetings and surface decision drift')
-  .option('-l, --last <n>', 'Auto-compare the N most recent meetings (e.g. --last 2)')
+  .option('-l, --last <n>', 'Auto-compare the N most recent meetings', '2')
   .action(driftCommand);
 
-// ── Recurring risk watchdog ───────────────────────────────────────────────────
+// ── watchdog ──────────────────────────────────────────────────────────────────
 program
   .command('watchdog')
-  .description('Scan all stored meetings for recurring risks and ownerless tasks')
+  .description('Scan all meetings for recurring risks and ownerless tasks')
   .option('-t, --team <name>', 'Filter by team name or keyword')
   .action(watchdogCommand);
 
 program.addHelpText('after', `
 ${chalk.dim('Examples:')}
-  ${chalk.cyan('teampulse analyze sprint-review.txt --skill product-manager')}
-  ${chalk.cyan('teampulse analyze meeting.txt --format json --output report.json')}
+  ${chalk.cyan('teampulse analyze sprint-review.txt --provider claude')}
+  ${chalk.cyan('teampulse analyze meeting.txt --filter risk --title "Sprint 12"')}
+  ${chalk.cyan('teampulse analyze --watch ./transcripts/')}
+  ${chalk.cyan('teampulse batch ./meetings/ --since 2026-05-01 --filter task')}
+  ${chalk.cyan('teampulse batch ./meetings/ --provider openai --title "Q2 Review"')}
   ${chalk.cyan('teampulse drift --last 2')}
   ${chalk.cyan('teampulse watchdog --team growth')}
   ${chalk.cyan('teampulse chat')}
-  ${chalk.cyan('teampulse init')}
 `);
 
 program.parse();

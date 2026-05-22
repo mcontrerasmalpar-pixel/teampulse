@@ -4,39 +4,39 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TeamPulse — Meeting Intelligence for the Terminal</title>
-  <meta name="description" content="TeamPulse reads your meeting transcripts and extracts decisions, tasks, risks, and owners using Gemini AI — right in your terminal. Tracks drift across meetings so nothing slips." />
+  <meta name="description" content="TeamPulse reads your meeting transcripts and extracts decisions, tasks, risks, and owners using Gemini, Claude, or GPT-4 — right in your terminal." />
   <meta property="og:title" content="TeamPulse — Meeting Intelligence for the Terminal" />
-  <meta property="og:description" content="Stop re-discussing. Start shipping. TeamPulse keeps every decision, task, and risk in check." />
+  <meta property="og:description" content="Stop re-discussing. Start shipping." />
   <meta property="og:type" content="website" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #FDF8F3;
-      --surface:   #F5EDE0;
-      --surface2:  #EDE0CE;
-      --border:    #DCC8A8;
-      --orange:    #D94A14;
-      --orange-2:  #F06030;
-      --orange-dim:#FDEADE;
-      --brown:     #8B5A35;
-      --text:      #1A0E08;
-      --text-dim:  #7A5542;
-      --text-muted:#B89070;
-      --term-bg:   #0C0806;
-      --term-surf: #161008;
-      --term-surf2:#1E160A;
-      --term-bdr:  #3A2A1A;
-      --term-text: #F0E0C8;
-      --term-muted:#5A4030;
-      --green:     #5A8830;
-      --red:       #C83010;
-      --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
-      --font-sans: 'Inter', system-ui, sans-serif;
-      --radius:    10px;
+      --bg:          #080C10;
+      --bg-2:        #0D1117;
+      --bg-3:        #111820;
+      --surface:     #141C25;
+      --surface-2:   #1A2433;
+      --border:      #1E2D3D;
+      --border-2:    #243447;
+      --accent:      #E8542A;
+      --accent-2:    #FF6B42;
+      --accent-dim:  rgba(232,84,42,.12);
+      --accent-glow: rgba(232,84,42,.25);
+      --text:        #E8EDF2;
+      --text-2:      #9BAAB8;
+      --text-3:      #5A6E82;
+      --green:       #3DD68C;
+      --yellow:      #F5A623;
+      --red:         #E8542A;
+      --blue:        #4D9EFF;
+      --font-mono:   'JetBrains Mono', 'Cascadia Code', monospace;
+      --font-sans:   'Inter', system-ui, sans-serif;
+      --radius:      10px;
+      --radius-lg:   16px;
     }
 
     html { scroll-behavior: smooth; }
@@ -50,16 +50,26 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    a { color: var(--orange); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
 
-    /* ── Nav ─────────────────────────────────────────────────────────────────── */
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    * { position: relative; z-index: 1; }
+
+    /* ── Nav ── */
     nav {
       position: sticky; top: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 2.5rem; height: 58px;
-      background: rgba(253,248,243,.93);
-      backdrop-filter: blur(14px);
+      padding: 0 2.5rem; height: 60px;
+      background: rgba(8,12,16,.85);
+      backdrop-filter: blur(20px) saturate(180%);
       border-bottom: 1px solid var(--border);
     }
 
@@ -69,580 +79,553 @@
       font-size: .95rem; color: var(--text);
       letter-spacing: -.4px;
     }
-    .nav-logo strong { color: var(--orange); }
+    .nav-logo strong { color: var(--accent); }
+    .nav-logo-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse-dot 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(.7); }
+    }
 
     .nav-links {
       display: flex; align-items: center; gap: 2rem; list-style: none;
     }
     .nav-links a {
-      color: var(--text-dim); font-size: .875rem;
-      font-weight: 500; transition: color .15s;
+      color: var(--text-2); font-size: .8rem;
+      font-weight: 500; transition: color .15s; letter-spacing: .2px;
     }
-    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .nav-links a:hover { color: var(--text); }
 
     .btn {
       display: inline-flex; align-items: center; gap: .45rem;
-      padding: .5rem 1.1rem; border-radius: 7px;
-      font-size: .875rem; font-weight: 600;
-      cursor: pointer; transition: all .15s; border: none;
+      padding: .5rem 1.15rem; border-radius: 8px;
+      font-size: .82rem; font-weight: 600;
+      cursor: pointer; transition: all .18s; border: none;
       text-decoration: none !important; white-space: nowrap;
+      font-family: var(--font-sans);
     }
-    .btn:hover { transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
-    .btn-primary { background: var(--orange); color: #fff; box-shadow: 0 2px 12px rgba(217,74,20,.3); }
-    .btn-primary:hover { background: var(--orange-2); }
-    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
-    .btn-outline:hover { border-color: var(--text-dim); }
-    .btn-sm { padding: .35rem .8rem; font-size: .8rem; }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .btn-primary:hover {
+      background: var(--accent-2);
+      box-shadow: 0 0 32px rgba(232,84,42,.45);
+      transform: translateY(-1px);
+      color: #fff;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border-2);
+      color: var(--text-2);
+    }
+    .btn-ghost:hover {
+      border-color: var(--text-3);
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+    .btn-sm { padding: .35rem .85rem; font-size: .78rem; }
 
-    /* ── Hero split ──────────────────────────────────────────────────────────── */
-    .hero-wrap {
-      max-width: 1200px; margin: 0 auto;
-      padding: 5rem 2.5rem 2rem;
+    /* ── Hero ── */
+    .hero {
+      min-height: 92vh;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 4rem; align-items: center;
+      gap: 5rem;
+      align-items: center;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 6rem 2.5rem 4rem;
     }
 
-    .hero-left { max-width: 520px; }
-
-    .badge {
-      display: inline-flex; align-items: center; gap: .4rem;
-      padding: .28rem .75rem;
-      background: var(--orange-dim); border: 1px solid rgba(217,74,20,.35);
-      border-radius: 100px; font-size: .72rem; font-weight: 700;
-      color: var(--orange); letter-spacing: .4px;
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .3rem .8rem;
+      background: var(--accent-dim);
+      border: 1px solid rgba(232,84,42,.3);
+      border-radius: 100px;
+      font-size: .7rem; font-weight: 700;
+      color: var(--accent-2); letter-spacing: .8px;
       text-transform: uppercase; margin-bottom: 1.75rem;
+      font-family: var(--font-mono);
     }
 
-    .hero-left h1 {
-      font-size: clamp(2.4rem, 5vw, 3.5rem);
+    .hero h1 {
+      font-size: clamp(2.8rem, 5.5vw, 4.2rem);
       font-weight: 900;
-      line-height: 1.06;
-      letter-spacing: -2px;
-      margin-bottom: 1.25rem;
+      line-height: 1.02;
+      letter-spacing: -2.5px;
+      margin-bottom: 1.5rem;
       color: var(--text);
     }
-    .hero-left h1 em {
+    .hero h1 em {
       font-style: normal;
-      color: var(--orange);
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 50%, #FF9F72 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
-    .hero-left p {
+    .hero p {
       font-size: 1.05rem;
-      color: var(--text-dim);
-      line-height: 1.65;
-      margin-bottom: 2rem;
-      max-width: 440px;
+      color: var(--text-2);
+      line-height: 1.7;
+      margin-bottom: 2.25rem;
+      max-width: 460px;
+      font-weight: 400;
     }
 
-    .hero-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+    .hero-actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 1.75rem; }
 
-    .hero-note {
-      margin-top: 1.5rem;
-      font-size: .78rem;
-      color: var(--text-muted);
+    .hero-meta {
+      display: flex; align-items: center; gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .hero-meta-item {
       display: flex; align-items: center; gap: .4rem;
+      font-size: .75rem; color: var(--text-3);
+      font-family: var(--font-mono);
+    }
+    .hero-meta-item span:first-child { color: var(--green); }
+
+    /* ── Gradient grid background ── */
+    .hero-right { position: relative; }
+    .hero-right::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px; bottom: -60px; left: -60px;
+      background: radial-gradient(ellipse at 60% 40%, rgba(232,84,42,.07) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
     }
 
-    /* ── Terminal ─────────────────────────────────────────────────────────────── */
+    /* ── Terminal ── */
     .terminal {
-      background: var(--term-bg);
-      border: 1px solid var(--term-bdr);
-      border-radius: 13px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
       overflow: hidden;
-      box-shadow: 0 32px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04);
+      box-shadow:
+        0 40px 100px rgba(0,0,0,.6),
+        0 0 0 1px rgba(255,255,255,.03),
+        inset 0 1px 0 rgba(255,255,255,.04);
+      position: relative; z-index: 1;
     }
 
     .terminal-bar {
       display: flex; align-items: center; gap: .5rem;
-      padding: .7rem 1rem;
-      background: var(--term-surf);
-      border-bottom: 1px solid var(--term-bdr);
+      padding: .75rem 1.1rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
     }
-
     .dot { width: 11px; height: 11px; border-radius: 50%; }
-    .dot-red { background: #ff5f57; }
-    .dot-yellow { background: #febc2e; }
-    .dot-green { background: #28c840; }
-
+    .dot-red    { background: #FF5F57; }
+    .dot-yellow { background: #FEBC2E; }
+    .dot-green  { background: #28C840; }
     .terminal-title {
       flex: 1; text-align: center;
-      font-size: .72rem; color: var(--term-muted);
+      font-size: .7rem; color: var(--text-3);
       font-family: var(--font-mono);
     }
 
     .tab-bar {
-      display: flex; border-bottom: 1px solid var(--term-bdr);
-      padding: 0 .75rem; background: var(--term-surf2);
+      display: flex; border-bottom: 1px solid var(--border);
+      padding: 0 .85rem; background: var(--surface-2);
+      overflow-x: auto;
     }
     .tab {
-      padding: .45rem .85rem; font-size: .72rem;
-      font-family: var(--font-mono); color: var(--term-muted);
+      padding: .5rem .9rem; font-size: .7rem;
+      font-family: var(--font-mono); color: var(--text-3);
       cursor: pointer; border-bottom: 2px solid transparent;
       transition: color .15s, border-color .15s; user-select: none;
+      white-space: nowrap;
     }
-    .tab.active { color: var(--orange-2); border-color: var(--orange-2); }
+    .tab.active { color: var(--accent-2); border-color: var(--accent-2); }
 
     .terminal-body {
-      padding: 1.1rem 1.4rem;
-      font-family: var(--font-mono); font-size: .78rem;
-      line-height: 1.7; overflow-x: auto;
-      color: var(--term-text); min-height: 260px;
+      padding: 1.2rem 1.5rem;
+      font-family: var(--font-mono); font-size: .76rem;
+      line-height: 1.8; overflow-x: auto;
+      color: var(--text); min-height: 270px;
     }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    .t-prompt { color: var(--orange-2); }
-    .t-cmd { color: var(--term-text); }
-    .t-dim { color: var(--term-muted); }
-    .t-green { color: #7ab84a; }
-    .t-yellow { color: #c4883a; }
-    .t-red { color: #d84a2a; }
-    .t-cyan { color: #e08030; }
-    .t-bold { font-weight: 700; }
+    .t-prompt { color: var(--accent-2); }
+    .t-cmd    { color: var(--text); }
+    .t-dim    { color: var(--text-3); }
+    .t-green  { color: var(--green); }
+    .t-yellow { color: var(--yellow); }
+    .t-red    { color: var(--red); }
+    .t-blue   { color: var(--blue); }
+    .t-bold   { font-weight: 700; }
 
-    /* ── AI reasoning terminal ── */
-    .t-user-line {
-      display: flex; align-items: flex-start; gap: .6rem;
-      margin-bottom: .9rem;
-    }
+    /* AI reasoning */
+    .t-user-line { display: flex; align-items: flex-start; gap: .65rem; margin-bottom: 1rem; }
     .t-user-icon {
-      flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
-      background: var(--orange); display: flex; align-items: center;
-      justify-content: center; font-size: .6rem; font-weight: 700; color: #fff;
+      flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px;
+      background: var(--accent); display: flex; align-items: center;
+      justify-content: center; font-size: .62rem; font-weight: 800; color: #fff;
       margin-top: 1px;
     }
-    .t-user-msg { color: var(--term-text); font-style: normal; }
-
+    .t-user-msg { color: var(--text); }
     .t-think-block {
-      margin: .6rem 0 .6rem 1.5rem;
-      padding: .6rem .9rem;
-      border-left: 2px solid var(--term-bdr);
+      margin: .5rem 0 .5rem 1.7rem;
+      padding: .6rem 1rem;
+      border-left: 2px solid var(--border-2);
       display: flex; flex-direction: column; gap: .3rem;
     }
-    .t-think {
-      color: #7a5a38; font-style: italic; font-size: .75rem; line-height: 1.5;
-    }
-    .t-think-step {
-      color: #6a4a28; font-size: .72rem;
-      display: flex; align-items: flex-start; gap: .4rem;
-    }
-    .t-think-step::before {
-      content: '›'; color: #5a3a18; flex-shrink: 0;
-    }
-
+    .t-think { color: var(--text-3); font-style: italic; font-size: .72rem; }
+    .t-think-step { color: #4A6070; font-size: .7rem; display: flex; gap: .4rem; }
+    .t-think-step::before { content: '›'; color: var(--text-3); flex-shrink: 0; }
     .t-exec-block {
-      margin: .7rem 0 .7rem 0;
-      background: var(--term-surf2);
-      border: 1px solid var(--term-bdr);
-      border-radius: 6px; padding: .5rem .9rem;
+      margin: .6rem 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px; padding: .45rem .85rem;
       display: flex; align-items: center; gap: .5rem;
     }
-    .t-exec-label { color: #5a4030; font-size: .68rem; text-transform: uppercase; letter-spacing: .5px; }
-    .t-exec-val { color: var(--term-text); font-size: .75rem; }
-
+    .t-exec-label { color: var(--text-3); font-size: .65rem; text-transform: uppercase; letter-spacing: .5px; }
+    .t-exec-val   { color: var(--text-2); font-size: .72rem; }
     .t-answer-block {
-      margin: .5rem 0 0 0;
-      padding: .7rem .9rem;
-      background: rgba(217,74,20,.07);
-      border: 1px solid rgba(217,74,20,.2);
-      border-radius: 6px;
+      margin: .5rem 0 0;
+      padding: .75rem 1rem;
+      background: var(--accent-dim);
+      border: 1px solid rgba(232,84,42,.25);
+      border-radius: 8px;
     }
-    .t-answer-label {
-      font-size: .65rem; color: var(--orange-2); text-transform: uppercase;
-      letter-spacing: .6px; margin-bottom: .35rem; font-weight: 700;
-    }
-    .t-answer-text { color: var(--term-text); font-size: .77rem; line-height: 1.6; }
+    .t-answer-label { font-size: .62rem; color: var(--accent-2); text-transform: uppercase; letter-spacing: .7px; margin-bottom: .3rem; font-weight: 700; }
+    .t-answer-text  { color: var(--text-2); font-size: .75rem; line-height: 1.65; }
 
-    /* ── Sections ────────────────────────────────────────────────────────────── */
-    section { padding: 5rem 2.5rem; }
-    .section-inner { max-width: 1200px; margin: 0 auto; }
+    /* ── Sections ── */
+    section { padding: 6rem 2.5rem; }
+    .section-inner { max-width: 1240px; margin: 0 auto; }
 
-    .section-label {
-      font-size: .72rem; font-weight: 700; letter-spacing: .8px;
-      text-transform: uppercase; color: var(--orange);
-      margin-bottom: .6rem;
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: .68rem; font-weight: 700; letter-spacing: 1.2px;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: .7rem;
     }
     .section-title {
-      font-size: clamp(1.7rem, 3.5vw, 2.4rem);
-      font-weight: 900; letter-spacing: -1.2px;
-      line-height: 1.1; margin-bottom: 1rem; color: var(--text);
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      font-weight: 900; letter-spacing: -1.5px;
+      line-height: 1.08; margin-bottom: 1rem; color: var(--text);
     }
     .section-sub {
-      font-size: 1rem; color: var(--text-dim); max-width: 560px;
-      line-height: 1.65; margin-bottom: 3rem;
+      font-size: .97rem; color: var(--text-2); max-width: 520px;
+      line-height: 1.7; margin-bottom: 3.5rem; font-weight: 400;
     }
 
-    /* ── Features grid ───────────────────────────────────────────────────────── */
+    /* ── Features ── */
+    #features { background: var(--bg-2); }
     .features-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
     }
-
     .feat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem 1.4rem;
-      transition: box-shadow .2s, transform .2s;
+      background: var(--bg-2);
+      padding: 2rem 1.75rem;
+      transition: background .2s;
     }
-    .feat-card:hover {
-      box-shadow: 0 8px 28px rgba(0,0,0,.08);
-      transform: translateY(-2px);
-    }
+    .feat-card:hover { background: var(--surface); }
     .feat-icon {
-      font-size: 1.4rem; margin-bottom: .75rem;
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; margin-bottom: 1rem;
+      background: var(--accent-dim); border: 1px solid rgba(232,84,42,.2);
     }
-    .feat-card h3 {
-      font-size: .95rem; font-weight: 700;
-      margin-bottom: .4rem; color: var(--text);
-    }
-    .feat-card p {
-      font-size: .855rem; color: var(--text-dim); line-height: 1.6;
-    }
+    .feat-card h3 { font-size: .9rem; font-weight: 700; margin-bottom: .45rem; color: var(--text); }
+    .feat-card p  { font-size: .82rem; color: var(--text-2); line-height: 1.65; }
 
-    /* ── How it works ────────────────────────────────────────────────────────── */
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 1.5rem; counter-reset: step;
-    }
-
-    .step {
-      position: relative;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem 1.4rem 1.4rem 1.4rem;
-      counter-increment: step;
-    }
-    .step::before {
-      content: counter(step, decimal-leading-zero);
-      display: block;
-      font-family: var(--font-mono);
-      font-size: .72rem; font-weight: 700;
-      color: var(--orange); margin-bottom: .6rem;
-      letter-spacing: .5px;
-    }
-    .step h3 { font-size: .95rem; font-weight: 700; margin-bottom: .4rem; }
-    .step p { font-size: .855rem; color: var(--text-dim); line-height: 1.6; }
-
-    /* ── Providers section ───────────────────────────────────────────────────── */
+    /* ── Providers ── */
+    #providers { background: var(--bg); }
     .providers-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
       gap: 1.25rem;
     }
-
     .provider-card {
-      background: var(--surface);
+      background: var(--bg-2);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem 1.4rem;
-      transition: box-shadow .2s, transform .2s;
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
     }
     .provider-card:hover {
-      box-shadow: 0 8px 28px rgba(0,0,0,.08);
-      transform: translateY(-2px);
+      border-color: var(--border-2);
+      transform: translateY(-3px);
+      box-shadow: 0 16px 40px rgba(0,0,0,.4);
     }
     .provider-card.featured {
-      border-color: var(--orange);
-      background: var(--orange-dim);
+      border-color: rgba(232,84,42,.4);
+      background: linear-gradient(135deg, var(--bg-2) 0%, rgba(232,84,42,.05) 100%);
+      box-shadow: 0 0 0 1px rgba(232,84,42,.1), inset 0 1px 0 rgba(232,84,42,.08);
     }
     .provider-header {
-      display: flex; align-items: center; gap: .7rem; margin-bottom: .75rem;
+      display: flex; align-items: center; gap: .75rem; margin-bottom: .9rem;
     }
-    .provider-icon { font-size: 1.5rem; }
+    .provider-icon { font-size: 1.4rem; }
     .provider-name { font-size: 1rem; font-weight: 800; color: var(--text); }
     .provider-badge {
-      font-size: .65rem; font-weight: 700; letter-spacing: .4px;
-      text-transform: uppercase; padding: .18rem .5rem;
-      border-radius: 4px; background: var(--orange); color: #fff;
+      font-family: var(--font-mono);
+      font-size: .6rem; font-weight: 700; letter-spacing: .5px;
+      text-transform: uppercase; padding: .18rem .55rem;
+      border-radius: 4px; background: var(--accent); color: #fff;
     }
-    .provider-card p { font-size: .855rem; color: var(--text-dim); line-height: 1.6; margin-bottom: .9rem; }
-    .provider-models {
-      display: flex; flex-wrap: wrap; gap: .4rem;
-    }
+    .provider-card p { font-size: .83rem; color: var(--text-2); line-height: 1.65; margin-bottom: 1rem; }
+    .provider-models { display: flex; flex-wrap: wrap; gap: .4rem; }
     .model-tag {
-      font-family: var(--font-mono); font-size: .7rem;
-      padding: .2rem .55rem; border-radius: 4px;
-      background: var(--surface2); border: 1px solid var(--border);
-      color: var(--text-dim);
+      font-family: var(--font-mono); font-size: .67rem;
+      padding: .22rem .6rem; border-radius: 4px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text-3);
     }
 
-    /* ── CLI Commands section ────────────────────────────────────────────────── */
+    /* ── CLI Commands ── */
+    #commands { background: var(--bg-2); }
     .commands-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 1.25rem;
-    }
-
-    .cmd-card {
-      background: var(--term-bg);
-      border: 1px solid var(--term-bdr);
-      border-radius: var(--radius);
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
       overflow: hidden;
     }
+    .cmd-card { background: var(--bg-2); overflow: hidden; transition: background .2s; }
+    .cmd-card:hover { background: var(--surface); }
     .cmd-card-header {
-      padding: .65rem 1rem;
-      background: var(--term-surf);
-      border-bottom: 1px solid var(--term-bdr);
+      padding: .75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
     }
-    .cmd-name {
-      font-family: var(--font-mono); font-size: .78rem;
-      font-weight: 700; color: var(--orange-2);
-    }
-    .cmd-desc-label {
-      font-size: .68rem; color: var(--term-muted);
+    .cmd-name { font-family: var(--font-mono); font-size: .78rem; font-weight: 700; color: var(--accent-2); }
+    .cmd-badge {
+      font-family: var(--font-mono); font-size: .62rem;
+      padding: .15rem .5rem; border-radius: 4px;
+      background: var(--surface-2); color: var(--text-3);
+      border: 1px solid var(--border);
     }
     .cmd-body {
-      padding: .9rem 1rem;
-      font-family: var(--font-mono); font-size: .75rem;
-      color: var(--term-text); line-height: 1.65;
+      padding: 1rem 1.25rem;
+      font-family: var(--font-mono); font-size: .73rem;
+      color: var(--text-2); line-height: 1.65;
     }
     .cmd-example {
-      margin-top: .5rem; padding: .5rem .7rem;
-      background: var(--term-surf2); border-radius: 5px;
-      border: 1px solid var(--term-bdr);
+      margin-top: .6rem; padding: .5rem .75rem;
+      background: var(--surface-2); border-radius: 5px;
+      border: 1px solid var(--border);
+      font-size: .7rem;
     }
-    .cmd-example .t-prompt { margin-right: .3rem; }
 
-    /* ── App Demo ────────────────────────────────────────────────────────────── */
+    /* ── App Demo ── */
+    #demo { background: var(--bg); }
     .app-demo-wrap {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 3rem; align-items: start;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 2.5rem; align-items: start;
     }
-
     .app-window {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
       overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0,0,0,.12);
+      box-shadow: 0 24px 64px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
     }
-
     .app-titlebar {
       display: flex; align-items: center; gap: .5rem;
-      padding: .65rem 1rem;
-      background: #f9fafb;
-      border-bottom: 1px solid #e5e7eb;
+      padding: .7rem 1rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
     }
-    .app-titlebar-title {
-      flex: 1; text-align: center;
-      font-size: .72rem; color: #9ca3af;
-      font-family: var(--font-mono);
-    }
-
+    .app-titlebar-title { flex: 1; text-align: center; font-size: .7rem; color: var(--text-3); font-family: var(--font-mono); }
     .app-tabs {
-      display: flex;
-      border-bottom: 1px solid #e5e7eb;
-      background: #fff;
-      padding: 0 1rem;
+      display: flex; border-bottom: 1px solid var(--border);
+      background: var(--bg-2); padding: 0 1rem;
     }
     .app-tab {
-      padding: .6rem .9rem;
-      font-size: .75rem; font-weight: 600;
-      color: #9ca3af; cursor: pointer;
+      padding: .6rem .9rem; font-size: .73rem; font-weight: 600;
+      color: var(--text-3); cursor: pointer;
       border-bottom: 2px solid transparent;
-      transition: color .15s, border-color .15s;
-      user-select: none;
+      transition: color .15s, border-color .15s; user-select: none;
     }
-    .app-tab.active { color: var(--orange); border-color: var(--orange); }
-
+    .app-tab.active { color: var(--accent); border-color: var(--accent); }
     .app-body { padding: 1.25rem; }
     .app-panel { display: none; }
     .app-panel.active { display: block; }
-
-    .meeting-header {
-      display: flex; align-items: flex-start;
-      justify-content: space-between; margin-bottom: 1rem;
-    }
-    .meeting-title { font-size: .95rem; font-weight: 700; color: #111827; margin-bottom: .2rem; }
-    .meeting-meta { font-size: .72rem; color: #9ca3af; }
-
+    .meeting-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; }
+    .meeting-title  { font-size: .9rem; font-weight: 700; color: var(--text); margin-bottom: .2rem; }
+    .meeting-meta   { font-size: .7rem; color: var(--text-3); font-family: var(--font-mono); }
     .score-badge {
       display: flex; flex-direction: column; align-items: center;
-      background: var(--orange-dim); border: 1px solid rgba(217,74,20,.3);
-      border-radius: 8px; padding: .5rem .8rem;
+      background: var(--accent-dim); border: 1px solid rgba(232,84,42,.3);
+      border-radius: 8px; padding: .5rem .9rem;
     }
-    .score-num { font-size: 1.4rem; font-weight: 900; color: var(--orange); line-height: 1; }
-    .score-lbl { font-size: .6rem; color: var(--orange); text-transform: uppercase; letter-spacing: .4px; }
-
-    .insight-list { display: flex; flex-direction: column; gap: .5rem; }
-    .insight-item {
-      display: flex; gap: .6rem; align-items: flex-start;
-      padding: .5rem .7rem;
-      background: #f9fafb; border-radius: 6px;
-      border: 1px solid #f3f4f6;
+    .score-num { font-size: 1.5rem; font-weight: 900; color: var(--accent); line-height: 1; }
+    .score-lbl { font-size: .58rem; color: var(--accent-2); text-transform: uppercase; letter-spacing: .5px; font-family: var(--font-mono); }
+    .insight-list  { display: flex; flex-direction: column; gap: .5rem; }
+    .insight-item  {
+      display: flex; gap: .65rem; align-items: flex-start;
+      padding: .6rem .75rem;
+      background: var(--surface); border-radius: 7px;
+      border: 1px solid var(--border);
     }
-    .insight-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      flex-shrink: 0; margin-top: 5px;
-    }
-    .insight-dot.decision { background: #3b82f6; }
-    .insight-dot.task     { background: #10b981; }
-    .insight-dot.risk     { background: #f59e0b; }
-    .insight-dot.blocker  { background: #ef4444; }
-    .insight-text { font-size: .78rem; color: #374151; line-height: 1.5; }
-    .insight-owner { font-size: .68rem; color: #9ca3af; margin-top: .15rem; }
-
-    .app-sidebar {
-      padding: 1.25rem;
-      background: #f9fafb;
-      border-left: 1px solid #e5e7eb;
-    }
-    .sidebar-section { margin-bottom: 1.25rem; }
-    .sidebar-label {
-      font-size: .65rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .6px; color: #9ca3af; margin-bottom: .5rem;
-    }
-    .sidebar-stat {
+    .insight-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+    .insight-dot.decision { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+    .insight-dot.task     { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .insight-dot.risk     { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+    .insight-dot.blocker  { background: var(--red); box-shadow: 0 0 6px var(--red); }
+    .insight-text  { font-size: .78rem; color: var(--text-2); line-height: 1.5; }
+    .insight-owner { font-size: .67rem; color: var(--text-3); margin-top: .15rem; font-family: var(--font-mono); }
+    .app-sidebar { padding: 1.25rem; background: var(--surface); border-top: 1px solid var(--border); }
+    .sidebar-label { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-3); margin-bottom: .6rem; font-family: var(--font-mono); }
+    .sidebar-stat  {
       display: flex; justify-content: space-between; align-items: center;
-      padding: .35rem 0; border-bottom: 1px solid #e5e7eb;
+      padding: .35rem 0; border-bottom: 1px solid var(--border);
       font-size: .78rem;
     }
     .sidebar-stat:last-child { border-bottom: none; }
-    .stat-label { color: #6b7280; }
-    .stat-val { font-weight: 700; color: #111827; }
-    .stat-val.ok   { color: #10b981; }
-    .stat-val.warn { color: #f59e0b; }
-    .stat-val.bad  { color: #ef4444; }
+    .stat-label { color: var(--text-3); }
+    .stat-val   { font-weight: 700; color: var(--text); font-family: var(--font-mono); font-size: .73rem; }
+    .stat-val.ok   { color: var(--green); }
+    .stat-val.warn { color: var(--yellow); }
+    .stat-val.bad  { color: var(--red); }
+    .drift-bar  { height: 5px; border-radius: 3px; background: var(--bg-3); overflow: hidden; margin-top: .5rem; }
+    .drift-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--green), var(--yellow)); }
 
-    .drift-bar {
-      height: 6px; border-radius: 3px;
-      background: #e5e7eb; overflow: hidden; margin-top: .5rem;
-    }
-    .drift-fill {
-      height: 100%; border-radius: 3px;
-      background: linear-gradient(90deg, #10b981, #f59e0b);
-      transition: width .4s ease;
-    }
-
-    /* ── Install section ─────────────────────────────────────────────────────── */
-    #install { background: var(--surface); }
-
+    /* ── Install ── */
+    #install { background: var(--bg-2); }
     .install-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
     }
-
     .install-os {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: var(--radius-lg);
       overflow: hidden;
     }
-
     .install-os-header {
-      display: flex; align-items: center; gap: .6rem;
-      padding: .8rem 1.2rem;
-      background: var(--surface2);
+      display: flex; align-items: center; gap: .65rem;
+      padding: .9rem 1.4rem;
+      background: var(--surface);
       border-bottom: 1px solid var(--border);
     }
-    .install-os-icon { font-size: 1.1rem; }
-    .install-os-name { font-size: .85rem; font-weight: 700; color: var(--text); }
-
-    .install-steps { padding: 1.2rem; display: flex; flex-direction: column; gap: 1rem; }
-
-    .install-step {
-      display: flex; gap: .9rem; align-items: flex-start;
-    }
+    .install-os-icon { font-size: 1rem; }
+    .install-os-name { font-size: .82rem; font-weight: 700; color: var(--text); font-family: var(--font-mono); }
+    .install-steps { padding: 1.4rem; display: flex; flex-direction: column; gap: 1.1rem; }
+    .install-step  { display: flex; gap: 1rem; align-items: flex-start; }
     .install-step-num {
-      flex-shrink: 0;
-      width: 22px; height: 22px; border-radius: 50%;
-      background: var(--orange); color: #fff;
-      font-size: .68rem; font-weight: 800;
+      flex-shrink: 0; width: 22px; height: 22px; border-radius: 6px;
+      background: var(--accent); color: #fff;
+      font-size: .67rem; font-weight: 800;
       display: flex; align-items: center; justify-content: center;
-      margin-top: 2px;
+      margin-top: 2px; font-family: var(--font-mono);
     }
     .install-step-content { flex: 1; }
     .install-step-title { font-size: .82rem; font-weight: 700; color: var(--text); margin-bottom: .3rem; }
-    .install-step-desc { font-size: .78rem; color: var(--text-dim); margin-bottom: .5rem; }
-
+    .install-step-desc  { font-size: .77rem; color: var(--text-2); margin-bottom: .5rem; line-height: 1.55; }
     .code-block {
-      background: var(--term-bg);
-      border: 1px solid var(--term-bdr);
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 6px;
-      padding: .55rem .85rem;
-      display: flex; align-items: center; justify-content: space-between;
-      gap: .5rem;
+      padding: .5rem .85rem;
+      display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+      margin-bottom: .4rem;
     }
     .code-block code {
-      font-family: var(--font-mono); font-size: .72rem;
-      color: var(--term-text); white-space: nowrap;
+      font-family: var(--font-mono); font-size: .7rem;
+      color: var(--text-2); white-space: nowrap;
       overflow: hidden; text-overflow: ellipsis;
     }
     .copy-btn {
       flex-shrink: 0;
-      background: var(--term-surf2); border: 1px solid var(--term-bdr);
-      border-radius: 4px; padding: .2rem .5rem;
-      font-size: .65rem; color: var(--term-muted);
-      cursor: pointer; transition: all .15s;
-      font-family: var(--font-sans);
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 4px; padding: .18rem .5rem;
+      font-size: .62rem; color: var(--text-3);
+      cursor: pointer; transition: all .15s; font-family: var(--font-sans);
     }
-    .copy-btn:hover { color: var(--term-text); border-color: var(--term-text); }
-    .copy-btn.copied { color: #7ab84a; border-color: #7ab84a; }
-
-    .install-optional {
-      margin-top: .25rem;
-      background: var(--orange-dim);
-      border: 1px solid rgba(217,74,20,.25);
-      border-radius: 6px; padding: .55rem .85rem;
-      font-size: .75rem; color: var(--brown);
+    .copy-btn:hover  { color: var(--text); border-color: var(--text-3); }
+    .copy-btn.copied { color: var(--green); border-color: var(--green); }
+    .install-note {
+      margin-top: .2rem;
+      padding: .55rem .85rem;
+      background: var(--accent-dim);
+      border: 1px solid rgba(232,84,42,.2);
+      border-radius: 6px;
+      font-size: .73rem; color: var(--text-2); line-height: 1.5;
     }
-    .install-optional strong { color: var(--orange); }
+    .install-note strong { color: var(--accent-2); }
 
-    /* ── CTA ─────────────────────────────────────────────────────────────────── */
+    /* ── CTA ── */
     .cta-section {
       text-align: center;
-      background: var(--term-bg);
-      border-top: 1px solid var(--term-bdr);
-      padding: 5rem 2.5rem;
+      background: var(--bg);
+      padding: 7rem 2.5rem;
+      position: relative; overflow: hidden;
     }
-    .cta-section .section-title { color: var(--term-text); }
-    .cta-section .section-sub { color: var(--term-muted); margin: 0 auto 2.5rem; }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px; height: 300px;
+      background: radial-gradient(ellipse, rgba(232,84,42,.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-title {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900; letter-spacing: -2px;
+      line-height: 1.05; margin-bottom: 1.25rem; color: var(--text);
+    }
+    .cta-sub { font-size: 1rem; color: var(--text-2); margin: 0 auto 2.5rem; max-width: 460px; line-height: 1.7; }
     .cta-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
 
-    /* ── Footer ──────────────────────────────────────────────────────────────── */
+    /* ── Footer ── */
     footer {
-      background: var(--term-bg);
-      border-top: 1px solid var(--term-bdr);
+      background: var(--bg-2);
+      border-top: 1px solid var(--border);
       padding: 2rem 2.5rem;
       display: flex; align-items: center; justify-content: space-between;
       flex-wrap: wrap; gap: 1rem;
     }
-    .footer-logo {
-      font-family: var(--font-mono); font-weight: 700;
-      font-size: .85rem; color: var(--term-text);
-    }
-    .footer-logo strong { color: var(--orange); }
+    .footer-logo { font-family: var(--font-mono); font-weight: 700; font-size: .85rem; color: var(--text-2); }
+    .footer-logo strong { color: var(--accent); }
     .footer-links { display: flex; gap: 1.5rem; }
-    .footer-links a { font-size: .8rem; color: var(--term-muted); }
-    .footer-links a:hover { color: var(--term-text); text-decoration: none; }
-    footer p { font-size: .78rem; color: var(--term-muted); }
+    .footer-links a { font-size: .78rem; color: var(--text-3); transition: color .15s; }
+    .footer-links a:hover { color: var(--text-2); }
+    footer p { font-size: .75rem; color: var(--text-3); }
 
-    /* ── Responsive ──────────────────────────────────────────────────────────── */
-    @media (max-width: 768px) {
-      .hero-wrap { grid-template-columns: 1fr; gap: 2.5rem; padding-top: 3rem; }
-      .app-demo-wrap { grid-template-columns: 1fr; }
-      .install-grid { grid-template-columns: 1fr; }
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; min-height: auto; gap: 3rem; padding-top: 3.5rem; }
+      .app-demo-wrap  { grid-template-columns: 1fr; }
+      .install-grid   { grid-template-columns: 1fr; }
+      .hero h1        { font-size: 2.6rem; }
+    }
+    @media (max-width: 640px) {
       nav { padding: 0 1.25rem; }
-      section { padding: 3.5rem 1.25rem; }
+      section { padding: 4rem 1.25rem; }
       .nav-links { display: none; }
+      .hero { padding: 3rem 1.25rem 2rem; }
     }
   </style>
 </head>
 <body>
 
-<!-- ── Nav ──────────────────────────────────────────────────────────────────── -->
+<!-- Nav -->
 <nav>
   <div class="nav-logo">
-    <span>🧠</span>
+    <div class="nav-logo-dot"></div>
     <span><strong>Team</strong>Pulse</span>
   </div>
   <ul class="nav-links">
@@ -652,25 +635,25 @@
     <li><a href="#demo">Demo</a></li>
     <li><a href="#install">Install</a></li>
   </ul>
-  <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-outline btn-sm" target="_blank">
-    ⭐ GitHub
-  </a>
+  <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-ghost btn-sm" target="_blank">★ GitHub</a>
 </nav>
 
-<!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
-<section style="padding-bottom:0">
-  <div class="hero-wrap">
+<!-- Hero -->
+<section style="padding:0">
+  <div class="hero">
     <div class="hero-left">
-      <div class="badge">⚡ Terminal-first · Multi-provider AI</div>
+      <div class="hero-eyebrow">⚡ v0.2.0 · multi-provider · terminal-first</div>
       <h1>Your meetings.<br>Finally <em>actionable</em>.</h1>
-      <p>TeamPulse reads your Google Meet transcripts and extracts decisions, tasks, risks, and owners using Gemini, Claude, or GPT-4 — right in your terminal. Tracks drift across meetings so nothing slips.</p>
+      <p>TeamPulse reads your Google Meet transcripts and extracts decisions, tasks, risks, and owners using Gemini, Claude, or GPT-4 — right in your terminal. Tracks drift so nothing slips.</p>
       <div class="hero-actions">
-        <a href="#install" class="btn btn-primary">🚀 Get Started</a>
-        <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-outline" target="_blank">View on GitHub</a>
+        <a href="#install" class="btn btn-primary">→ Get Started</a>
+        <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-ghost" target="_blank">View Source</a>
       </div>
-      <p class="hero-note">
-        <span>🔒</span> Runs locally — your transcripts never leave your machine
-      </p>
+      <div class="hero-meta">
+        <div class="hero-meta-item"><span>●</span><span>Runs locally</span></div>
+        <div class="hero-meta-item"><span>●</span><span>No cloud required</span></div>
+        <div class="hero-meta-item"><span>●</span><span>Node.js 18+</span></div>
+      </div>
     </div>
     <div class="hero-right">
       <div class="terminal">
@@ -687,7 +670,6 @@
           <div class="tab" data-target="tab-batch">batch</div>
         </div>
         <div class="terminal-body">
-          <!-- AI Reasoning tab -->
           <div class="tab-panel active" id="tab-ai">
             <div class="t-user-line">
               <div class="t-user-icon">M</div>
@@ -707,20 +689,18 @@
               <div class="t-answer-label">Answer</div>
               <div class="t-answer-text">
                 <span class="t-green t-bold">3 decisions</span> found across 4 meetings:<br>
-                › <span class="t-cyan">Mon</span> — Migrate auth to Clerk <span class="t-dim">(owner: @sara)</span><br>
-                › <span class="t-cyan">Wed</span> — Freeze scope for v1.2 <span class="t-dim">(owner: @team)</span><br>
-                › <span class="t-cyan">Fri</span> — Deploy to staging Friday EOD <span class="t-dim">(owner: @carlos)</span>
+                › <span class="t-blue">Mon</span> — Migrate auth to Clerk <span class="t-dim">(owner: @sara)</span><br>
+                › <span class="t-blue">Wed</span> — Freeze scope for v1.2 <span class="t-dim">(owner: @team)</span><br>
+                › <span class="t-blue">Fri</span> — Deploy to staging Friday EOD <span class="t-dim">(owner: @carlos)</span>
               </div>
             </div>
           </div>
-
-          <!-- analyze tab -->
           <div class="tab-panel" id="tab-analyze">
-            <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse analyze meeting-2026-05-22.txt</span></div>
-            <div class="t-dim" style="margin:.4rem 0 .8rem 1rem">🧠 Analyzing with gemini-2.0-flash…</div>
+            <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse analyze meeting-2026-05-22.txt --provider claude</span></div>
+            <div class="t-dim" style="margin:.4rem 0 .8rem 1.1rem">🤖 Analyzing with claude-3-5-sonnet…</div>
             <div><span class="t-green t-bold">✓</span> <span class="t-bold">3 decisions</span> · <span class="t-bold">5 tasks</span> · <span class="t-bold">2 risks</span></div>
             <br>
-            <div><span class="t-cyan t-bold">DECISIONS</span></div>
+            <div><span class="t-blue t-bold">DECISIONS</span></div>
             <div class="t-dim">──────────────────────────────────────</div>
             <div>› Migrate auth to Clerk <span class="t-dim">[sara] [high]</span></div>
             <div>› Freeze scope for v1.2 <span class="t-dim">[team] [confirmed]</span></div>
@@ -729,26 +709,21 @@
             <div class="t-dim">──────────────────────────────────────</div>
             <div>› Update onboarding flow <span class="t-dim">[carlos] [due: fri]</span></div>
             <div>› Write migration script <span class="t-dim">[sara] [due: mon]</span></div>
-            <div>› QA staging environment <span class="t-dim">[team] [due: thu]</span></div>
             <br>
             <div><span class="t-red t-bold">RISKS</span></div>
             <div class="t-dim">──────────────────────────────────────</div>
             <div>› API rate limits on free tier <span class="t-dim">[unresolved]</span></div>
           </div>
-
-          <!-- watch tab -->
           <div class="tab-panel" id="tab-watch">
             <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse analyze --watch ./transcripts/</span></div>
-            <div class="t-dim" style="margin:.3rem 0 .7rem 1rem">👁  Watching for new transcripts… (Ctrl+C to stop)</div>
+            <div class="t-dim" style="margin:.3rem 0 .7rem 1.1rem">👁  Watching for new transcripts… (Ctrl+C to stop)</div>
             <div><span class="t-green">▶</span> <span class="t-dim">sprint-planning.txt</span> → <span class="t-green t-bold">4d · 6t · 1r</span></div>
             <div><span class="t-green">▶</span> <span class="t-dim">design-review.txt</span>  → <span class="t-green t-bold">2d · 3t · 0r</span></div>
             <div><span class="t-yellow">⟳</span> <span class="t-dim">waiting…</span></div>
           </div>
-
-          <!-- batch tab -->
           <div class="tab-panel" id="tab-batch">
             <div><span class="t-prompt">❯</span> <span class="t-cmd">teampulse batch ./transcripts/ --since 2026-05-01 --filter risk</span></div>
-            <div class="t-dim" style="margin:.3rem 0 .7rem 1rem">📦 Batch processing 7 files…</div>
+            <div class="t-dim" style="margin:.3rem 0 .7rem 1.1rem">📦 Batch processing 7 files…</div>
             <div><span class="t-green">✓</span> sprint-planning.txt</div>
             <div><span class="t-green">✓</span> design-review.txt</div>
             <div><span class="t-green">✓</span> backend-sync.txt</div>
@@ -766,55 +741,29 @@
   </div>
 </section>
 
-<!-- ── Features ──────────────────────────────────────────────────────────────── -->
+<!-- Features -->
 <section id="features">
   <div class="section-inner">
-    <p class="section-label">Features</p>
+    <p class="section-eyebrow">Features</p>
     <h2 class="section-title">Everything your team needs</h2>
     <p class="section-sub">From raw transcript to structured insights in seconds. No cloud, no SaaS — just your terminal.</p>
-
     <div class="features-grid">
-      <div class="feat-card">
-        <div class="feat-icon">🎯</div>
-        <h3>Decisions extracted</h3>
-        <p>Automatically identifies and tags every decision made during the meeting with owner and confidence score.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon">✅</div>
-        <h3>Task detection</h3>
-        <p>Finds action items, assigns owners from context, and flags missing deadlines before they become blockers.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon">⚠️</div>
-        <h3>Risk identification</h3>
-        <p>Surfaces blockers and risks mentioned in conversation — even when they're not explicitly labeled as such.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon">📈</div>
-        <h3>Drift tracking</h3>
-        <p>Compares meeting-to-meeting to detect topic drift, unresolved decisions, and recurring blockers.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon">👁</div>
-        <h3>--watch mode</h3>
-        <p>Monitor a folder for new transcripts and get instant analysis as meetings finish — zero manual steps.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon">📦</div>
-        <h3>Batch processing</h3>
-        <p>Run analysis across dozens of files at once with <code style="font-family:var(--font-mono);font-size:.8em">--since</code>, <code style="font-family:var(--font-mono);font-size:.8em">--filter</code>, and <code style="font-family:var(--font-mono);font-size:.8em">--title</code> flags.</p>
-      </div>
+      <div class="feat-card"><div class="feat-icon">🎯</div><h3>Decisions extracted</h3><p>Automatically identifies and tags every decision with owner and confidence score.</p></div>
+      <div class="feat-card"><div class="feat-icon">✅</div><h3>Task detection</h3><p>Finds action items, assigns owners from context, and flags missing deadlines.</p></div>
+      <div class="feat-card"><div class="feat-icon">⚠️</div><h3>Risk identification</h3><p>Surfaces blockers and risks — even when they're not explicitly labeled as such.</p></div>
+      <div class="feat-card"><div class="feat-icon">📈</div><h3>Drift tracking</h3><p>Compares meeting-to-meeting to detect topic drift and recurring blockers.</p></div>
+      <div class="feat-card"><div class="feat-icon">👁</div><h3>--watch mode</h3><p>Monitor a folder for new transcripts and get instant analysis as meetings finish.</p></div>
+      <div class="feat-card"><div class="feat-icon">📦</div><h3>Batch processing</h3><p>Run analysis across dozens of files with <code style="font-family:var(--font-mono);font-size:.85em">--since</code>, <code style="font-family:var(--font-mono);font-size:.85em">--filter</code>, and <code style="font-family:var(--font-mono);font-size:.85em">--title</code>.</p></div>
     </div>
   </div>
 </section>
 
-<!-- ── Providers ─────────────────────────────────────────────────────────────── -->
-<section id="providers" style="background: var(--surface)">
+<!-- Providers -->
+<section id="providers">
   <div class="section-inner">
-    <p class="section-label">AI Providers</p>
+    <p class="section-eyebrow">AI Providers</p>
     <h2 class="section-title">Your model, your choice</h2>
-    <p class="section-sub">TeamPulse supports multiple AI providers out of the box. Switch with a single flag — no code changes needed.</p>
-
+    <p class="section-sub">Switch providers with a single flag — no code changes, no config rewrite.</p>
     <div class="providers-grid">
       <div class="provider-card featured">
         <div class="provider-header">
@@ -822,7 +771,7 @@
           <span class="provider-name">Google Gemini</span>
           <span class="provider-badge">Default</span>
         </div>
-        <p>Best speed-to-quality ratio for meeting analysis. Gemini 2.0 Flash handles long transcripts with ease.</p>
+        <p>Best speed-to-quality ratio. Gemini 2.0 Flash handles long transcripts with ease.</p>
         <div class="provider-models">
           <span class="model-tag">gemini-2.0-flash</span>
           <span class="model-tag">gemini-1.5-pro</span>
@@ -834,7 +783,7 @@
           <span class="provider-icon">🤖</span>
           <span class="provider-name">Anthropic Claude</span>
         </div>
-        <p>Superior reasoning for complex multi-speaker transcripts. Claude 3 excels at nuanced context understanding.</p>
+        <p>Superior reasoning for complex multi-speaker transcripts and nuanced context.</p>
         <div class="provider-models">
           <span class="model-tag">claude-3-5-sonnet</span>
           <span class="model-tag">claude-3-haiku</span>
@@ -846,7 +795,7 @@
           <span class="provider-icon">⚡</span>
           <span class="provider-name">OpenAI GPT-4</span>
         </div>
-        <p>Industry-standard reliability. GPT-4o delivers consistent structured output for all transcript formats.</p>
+        <p>Industry-standard reliability. GPT-4o delivers consistent structured output.</p>
         <div class="provider-models">
           <span class="model-tag">gpt-4o</span>
           <span class="model-tag">gpt-4o-mini</span>
@@ -857,105 +806,32 @@
   </div>
 </section>
 
-<!-- ── CLI Commands ──────────────────────────────────────────────────────────── -->
+<!-- CLI Commands -->
 <section id="commands">
   <div class="section-inner">
-    <p class="section-label">CLI Reference</p>
+    <p class="section-eyebrow">CLI Reference</p>
     <h2 class="section-title">Powerful flags, simple syntax</h2>
     <p class="section-sub">Every command designed for real workflows — pipe, script, automate.</p>
-
     <div class="commands-grid">
-      <div class="cmd-card">
-        <div class="cmd-card-header">
-          <span class="cmd-name">teampulse analyze</span>
-          <span class="cmd-desc-label">Single file</span>
-        </div>
-        <div class="cmd-body">
-          Analyze a single transcript file and print structured results.
-          <div class="cmd-example">
-            <span class="t-prompt">❯</span><span class="t-cmd"> teampulse analyze meeting.txt</span>
-          </div>
-        </div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-card-header">
-          <span class="cmd-name">--provider</span>
-          <span class="cmd-desc-label">AI model</span>
-        </div>
-        <div class="cmd-body">
-          Switch AI provider without changing config.
-          <div class="cmd-example">
-            <span class="t-prompt">❯</span><span class="t-cmd"> teampulse analyze m.txt --provider claude</span>
-          </div>
-        </div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-card-header">
-          <span class="cmd-name">--watch</span>
-          <span class="cmd-desc-label">Live monitoring</span>
-        </div>
-        <div class="cmd-body">
-          Watch a folder and auto-analyze new transcripts as they appear.
-          <div class="cmd-example">
-            <span class="t-prompt">❯</span><span class="t-cmd"> teampulse analyze --watch ./meetings/</span>
-          </div>
-        </div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-card-header">
-          <span class="cmd-name">batch + --since</span>
-          <span class="cmd-desc-label">Date filter</span>
-        </div>
-        <div class="cmd-body">
-          Process all transcripts since a date. ISO format or relative.
-          <div class="cmd-example">
-            <span class="t-prompt">❯</span><span class="t-cmd"> teampulse batch ./ --since 2026-05-01</span>
-          </div>
-        </div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-card-header">
-          <span class="cmd-name">--filter</span>
-          <span class="cmd-desc-label">Type filter</span>
-        </div>
-        <div class="cmd-body">
-          Filter output to a specific insight type: <code style="font-family:var(--font-mono)">risk</code>, <code style="font-family:var(--font-mono)">task</code>, <code style="font-family:var(--font-mono)">decision</code>.
-          <div class="cmd-example">
-            <span class="t-prompt">❯</span><span class="t-cmd"> teampulse batch ./ --filter risk</span>
-          </div>
-        </div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-card-header">
-          <span class="cmd-name">--title</span>
-          <span class="cmd-desc-label">Label output</span>
-        </div>
-        <div class="cmd-body">
-          Tag your analysis with a custom title for reports and logs.
-          <div class="cmd-example">
-            <span class="t-prompt">❯</span><span class="t-cmd"> teampulse analyze m.txt --title "Sprint 12"</span>
-          </div>
-        </div>
-      </div>
+      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">teampulse analyze</span><span class="cmd-badge">single file</span></div><div class="cmd-body">Analyze a single transcript and print structured results.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze meeting.txt</div></div></div>
+      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--provider</span><span class="cmd-badge">AI model</span></div><div class="cmd-body">Switch AI provider without changing config.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze m.txt --provider claude</div></div></div>
+      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--watch</span><span class="cmd-badge">live mode</span></div><div class="cmd-body">Watch a folder and auto-analyze new transcripts.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze --watch ./meetings/</div></div></div>
+      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">batch + --since</span><span class="cmd-badge">date filter</span></div><div class="cmd-body">Process all transcripts since a date.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse batch ./ --since 2026-05-01</div></div></div>
+      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--filter</span><span class="cmd-badge">type filter</span></div><div class="cmd-body">Show only a specific insight type: risk · task · decision.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse batch ./ --filter risk</div></div></div>
+      <div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--title</span><span class="cmd-badge">label</span></div><div class="cmd-body">Tag your analysis with a custom label for reports.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze m.txt --title "Sprint 12"</div></div></div>
     </div>
   </div>
 </section>
 
-<!-- ── App Demo ──────────────────────────────────────────────────────────────── -->
-<section id="demo" style="background: var(--surface)">
+<!-- App Demo -->
+<section id="demo">
   <div class="section-inner">
-    <p class="section-label">App Demo</p>
+    <p class="section-eyebrow">App Demo</p>
     <h2 class="section-title">See it in action</h2>
-    <p class="section-sub">A preview of the upcoming Chrome Extension UI — visual meeting intelligence built on the same CLI engine.</p>
-
+    <p class="section-sub">Preview of the upcoming Chrome Extension UI — visual meeting intelligence built on the same CLI engine.</p>
     <div class="app-demo-wrap">
       <div class="app-window">
-        <div class="app-titlebar">
-          <div class="dot dot-red"></div>
-          <div class="dot dot-yellow"></div>
-          <div class="dot dot-green"></div>
-          <span class="app-titlebar-title">TeamPulse — Meeting Dashboard</span>
-        </div>
+        <div class="app-titlebar"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="app-titlebar-title">TeamPulse — Meeting Dashboard</span></div>
         <div class="app-tabs">
           <div class="app-tab active" data-target="app-tab-insights">Insights</div>
           <div class="app-tab" data-target="app-tab-tasks">Tasks</div>
@@ -964,309 +840,104 @@
         <div class="app-body">
           <div class="app-panel active" id="app-tab-insights">
             <div class="meeting-header">
-              <div>
-                <div class="meeting-title">Sprint Planning — May 22</div>
-                <div class="meeting-meta">47 min · 5 participants · gemini-2.0-flash</div>
-              </div>
-              <div class="score-badge">
-                <span class="score-num">84</span>
-                <span class="score-lbl">Score</span>
-              </div>
+              <div><div class="meeting-title">Sprint Planning — May 22</div><div class="meeting-meta">47 min · 5 participants · gemini-2.0-flash</div></div>
+              <div class="score-badge"><span class="score-num">84</span><span class="score-lbl">Score</span></div>
             </div>
             <div class="insight-list">
-              <div class="insight-item">
-                <div class="insight-dot decision"></div>
-                <div>
-                  <div class="insight-text">Migrate authentication layer to Clerk before v1.2 launch</div>
-                  <div class="insight-owner">@sara · high confidence</div>
-                </div>
-              </div>
-              <div class="insight-item">
-                <div class="insight-dot task"></div>
-                <div>
-                  <div class="insight-text">Update onboarding flow copy and illustrations</div>
-                  <div class="insight-owner">@carlos · due Friday</div>
-                </div>
-              </div>
-              <div class="insight-item">
-                <div class="insight-dot risk"></div>
-                <div>
-                  <div class="insight-text">API rate limits may block automated testing pipeline</div>
-                  <div class="insight-owner">unresolved · flagged</div>
-                </div>
-              </div>
-              <div class="insight-item">
-                <div class="insight-dot blocker"></div>
-                <div>
-                  <div class="insight-text">Staging environment down — blocks QA until Thursday</div>
-                  <div class="insight-owner">@devops · critical</div>
-                </div>
-              </div>
+              <div class="insight-item"><div class="insight-dot decision"></div><div><div class="insight-text">Migrate authentication layer to Clerk before v1.2 launch</div><div class="insight-owner">@sara · high confidence</div></div></div>
+              <div class="insight-item"><div class="insight-dot task"></div><div><div class="insight-text">Update onboarding flow copy and illustrations</div><div class="insight-owner">@carlos · due Friday</div></div></div>
+              <div class="insight-item"><div class="insight-dot risk"></div><div><div class="insight-text">API rate limits may block automated testing pipeline</div><div class="insight-owner">unresolved · flagged</div></div></div>
+              <div class="insight-item"><div class="insight-dot blocker"></div><div><div class="insight-text">Staging environment down — blocks QA until Thursday</div><div class="insight-owner">@devops · critical</div></div></div>
             </div>
           </div>
           <div class="app-panel" id="app-tab-tasks">
             <div class="insight-list">
-              <div class="insight-item">
-                <div class="insight-dot task"></div>
-                <div>
-                  <div class="insight-text">Write auth migration script</div>
-                  <div class="insight-owner">@sara · due Monday</div>
-                </div>
-              </div>
-              <div class="insight-item">
-                <div class="insight-dot task"></div>
-                <div>
-                  <div class="insight-text">QA staging environment after fix</div>
-                  <div class="insight-owner">@team · due Thursday</div>
-                </div>
-              </div>
-              <div class="insight-item">
-                <div class="insight-dot task"></div>
-                <div>
-                  <div class="insight-text">Deploy to production Friday EOD</div>
-                  <div class="insight-owner">@carlos · due Friday</div>
-                </div>
-              </div>
+              <div class="insight-item"><div class="insight-dot task"></div><div><div class="insight-text">Write auth migration script</div><div class="insight-owner">@sara · due Monday</div></div></div>
+              <div class="insight-item"><div class="insight-dot task"></div><div><div class="insight-text">QA staging environment after fix</div><div class="insight-owner">@team · due Thursday</div></div></div>
+              <div class="insight-item"><div class="insight-dot task"></div><div><div class="insight-text">Deploy to production Friday EOD</div><div class="insight-owner">@carlos · due Friday</div></div></div>
             </div>
           </div>
           <div class="app-panel" id="app-tab-drift">
             <div class="insight-list">
-              <div class="insight-item">
-                <div class="insight-dot risk"></div>
-                <div>
-                  <div class="insight-text">API rate limits — mentioned in 3 consecutive meetings</div>
-                  <div class="insight-owner">drift detected · still unresolved</div>
-                </div>
-              </div>
-              <div class="insight-item">
-                <div class="insight-dot decision"></div>
-                <div>
-                  <div class="insight-text">Auth migration re-discussed — decision drifted from last sprint</div>
-                  <div class="insight-owner">2 meetings · owner changed</div>
-                </div>
-              </div>
+              <div class="insight-item"><div class="insight-dot risk"></div><div><div class="insight-text">API rate limits — mentioned in 3 consecutive meetings</div><div class="insight-owner">drift detected · still unresolved</div></div></div>
+              <div class="insight-item"><div class="insight-dot decision"></div><div><div class="insight-text">Auth migration re-discussed — decision drifted from last sprint</div><div class="insight-owner">2 meetings · owner changed</div></div></div>
             </div>
           </div>
         </div>
+        <div class="app-sidebar">
+          <div class="sidebar-label">Meeting Stats</div>
+          <div class="sidebar-stat"><span class="stat-label">Decisions</span><span class="stat-val ok">3</span></div>
+          <div class="sidebar-stat"><span class="stat-label">Tasks</span><span class="stat-val ok">5</span></div>
+          <div class="sidebar-stat"><span class="stat-label">Risks</span><span class="stat-val warn">2</span></div>
+          <div class="sidebar-stat"><span class="stat-label">Blockers</span><span class="stat-val bad">1</span></div>
+          <div class="sidebar-stat"><span class="stat-label">Model</span><span class="stat-val" style="color:var(--text-3)">gemini-2.0-flash</span></div>
+          <div class="sidebar-stat"><span class="stat-label">Latency</span><span class="stat-val ok">1.3s</span></div>
+          <div style="margin-top:.75rem">
+            <div class="sidebar-label">Drift Score</div>
+            <div class="drift-bar"><div class="drift-fill" style="width:62%"></div></div>
+            <div style="font-size:.67rem;color:var(--text-3);margin-top:.3rem;font-family:var(--font-mono)">62% — moderate vs last sprint</div>
+          </div>
+        </div>
       </div>
-
-      <div>
-        <div class="app-window">
-          <div class="app-titlebar">
-            <div class="dot dot-red"></div>
-            <div class="dot dot-yellow"></div>
-            <div class="dot dot-green"></div>
-            <span class="app-titlebar-title">Meeting Stats</span>
-          </div>
-          <div class="app-sidebar">
-            <div class="sidebar-section">
-              <div class="sidebar-label">This Meeting</div>
-              <div class="sidebar-stat"><span class="stat-label">Decisions</span><span class="stat-val ok">3</span></div>
-              <div class="sidebar-stat"><span class="stat-label">Tasks</span><span class="stat-val ok">5</span></div>
-              <div class="sidebar-stat"><span class="stat-label">Risks</span><span class="stat-val warn">2</span></div>
-              <div class="sidebar-stat"><span class="stat-label">Blockers</span><span class="stat-val bad">1</span></div>
-            </div>
-            <div class="sidebar-section">
-              <div class="sidebar-label">Drift Score</div>
-              <div class="drift-bar"><div class="drift-fill" style="width:62%"></div></div>
-              <div style="font-size:.72rem;color:var(--text-muted);margin-top:.35rem">62% — moderate drift vs last sprint</div>
-            </div>
-            <div class="sidebar-section">
-              <div class="sidebar-label">Provider</div>
-              <div class="sidebar-stat"><span class="stat-label">Model</span><span class="stat-val" style="font-family:var(--font-mono);font-size:.72rem">gemini-2.0-flash</span></div>
-              <div class="sidebar-stat"><span class="stat-label">Tokens</span><span class="stat-val">4,821</span></div>
-              <div class="sidebar-stat"><span class="stat-label">Latency</span><span class="stat-val ok">1.3s</span></div>
-            </div>
-          </div>
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem">
+          <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.75rem">Multi-provider</div>
+          <div style="font-size:.85rem;color:var(--text);font-weight:700;margin-bottom:.4rem">Switch models on the fly</div>
+          <div style="font-size:.78rem;color:var(--text-2);line-height:1.6;margin-bottom:1rem">No config file changes. Just pass <code style="font-family:var(--font-mono);color:var(--accent-2)">--provider</code> and go.</div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem;font-family:var(--font-mono);font-size:.7rem;color:var(--text-2)"><span style="color:var(--accent-2)">❯</span> teampulse analyze m.txt <span style="color:var(--green)">--provider openai</span></div>
+        </div>
+        <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem">
+          <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.75rem">Privacy first</div>
+          <div style="font-size:.85rem;color:var(--text);font-weight:700;margin-bottom:.4rem">Your data stays local</div>
+          <div style="font-size:.78rem;color:var(--text-2);line-height:1.6">Transcripts are processed on your machine. Nothing is stored in the cloud without your consent.</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── Install ───────────────────────────────────────────────────────────────── -->
+<!-- Install -->
 <section id="install">
   <div class="section-inner">
-    <p class="section-label">Installation</p>
+    <p class="section-eyebrow">Installation</p>
     <h2 class="section-title">Up and running in 2 minutes</h2>
-    <p class="section-sub">TeamPulse runs on Node.js 18+. Pick your platform and follow the steps below.</p>
-
+    <p class="section-sub">TeamPulse runs on Node.js 18+. Pick your platform and follow the steps.</p>
     <div class="install-grid">
-      <!-- macOS / Linux -->
       <div class="install-os">
-        <div class="install-os-header">
-          <span class="install-os-icon">🍎</span>
-          <span class="install-os-name">macOS &amp; Linux</span>
-        </div>
+        <div class="install-os-header"><span class="install-os-icon">🍎</span><span class="install-os-name">macOS &amp; Linux</span></div>
         <div class="install-steps">
-          <div class="install-step">
-            <div class="install-step-num">1</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Verify Node.js 18+</div>
-              <div class="install-step-desc">Make sure you have Node.js 18 or higher installed.</div>
-              <div class="code-block">
-                <code>node --version</code>
-                <button class="copy-btn" onclick="copyCode(this,'node --version')">Copy</button>
-              </div>
-            </div>
-          </div>
-          <div class="install-step">
-            <div class="install-step-num">2</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Clone &amp; install dependencies</div>
-              <div class="install-step-desc">Clone the repo and install all npm packages.</div>
-              <div class="code-block" style="margin-bottom:.5rem">
-                <code>git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git</code>
-                <button class="copy-btn" onclick="copyCode(this,'git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git')">Copy</button>
-              </div>
-              <div class="code-block">
-                <code>cd teampulse &amp;&amp; npm install</code>
-                <button class="copy-btn" onclick="copyCode(this,'cd teampulse && npm install')">Copy</button>
-              </div>
-            </div>
-          </div>
-          <div class="install-step">
-            <div class="install-step-num">3</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Configure your API key</div>
-              <div class="install-step-desc">Copy the example env file and add your Gemini API key.</div>
-              <div class="code-block" style="margin-bottom:.5rem">
-                <code>cp .env.example .env</code>
-                <button class="copy-btn" onclick="copyCode(this,'cp .env.example .env')">Copy</button>
-              </div>
-              <div class="install-optional">
-                Open <strong>.env</strong> and set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, or <strong>OPENAI_API_KEY</strong> — whichever provider you want to use.
-              </div>
-            </div>
-          </div>
-          <div class="install-step">
-            <div class="install-step-num">4</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Link globally</div>
-              <div class="install-step-desc">Make the <code style="font-family:var(--font-mono)">teampulse</code> command available system-wide.</div>
-              <div class="code-block">
-                <code>npm link</code>
-                <button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button>
-              </div>
-            </div>
-          </div>
-          <div class="install-step">
-            <div class="install-step-num">5</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Run your first analysis</div>
-              <div class="install-step-desc">Drop a transcript in the data folder and analyze it.</div>
-              <div class="code-block">
-                <code>teampulse analyze data/sample.txt</code>
-                <button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt')">Copy</button>
-              </div>
-            </div>
-          </div>
+          <div class="install-step"><div class="install-step-num">1</div><div class="install-step-content"><div class="install-step-title">Verify Node.js 18+</div><div class="install-step-desc">Make sure you have Node.js 18 or higher.</div><div class="code-block"><code>node --version</code><button class="copy-btn" onclick="copyCode(this,'node --version')">Copy</button></div></div></div>
+          <div class="install-step"><div class="install-step-num">2</div><div class="install-step-content"><div class="install-step-title">Clone &amp; install</div><div class="install-step-desc">Clone the repo and install dependencies.</div><div class="code-block" style="margin-bottom:.4rem"><code>git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git</code><button class="copy-btn" onclick="copyCode(this,'git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git')">Copy</button></div><div class="code-block"><code>cd teampulse &amp;&amp; npm install</code><button class="copy-btn" onclick="copyCode(this,'cd teampulse && npm install')">Copy</button></div></div></div>
+          <div class="install-step"><div class="install-step-num">3</div><div class="install-step-content"><div class="install-step-title">Configure API keys</div><div class="install-step-desc">Copy the env file and add your key.</div><div class="code-block" style="margin-bottom:.4rem"><code>cp .env.example .env</code><button class="copy-btn" onclick="copyCode(this,'cp .env.example .env')">Copy</button></div><div class="install-note">Set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, or <strong>OPENAI_API_KEY</strong> in <strong>.env</strong></div></div></div>
+          <div class="install-step"><div class="install-step-num">4</div><div class="install-step-content"><div class="install-step-title">Link globally</div><div class="install-step-desc">Make <code style="font-family:var(--font-mono)">teampulse</code> available system-wide.</div><div class="code-block"><code>npm link</code><button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button></div></div></div>
+          <div class="install-step"><div class="install-step-num">5</div><div class="install-step-content"><div class="install-step-title">First analysis</div><div class="install-step-desc">Drop a transcript in data/ and analyze it.</div><div class="code-block"><code>teampulse analyze data/sample.txt</code><button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt')">Copy</button></div></div></div>
         </div>
       </div>
-
-      <!-- Windows -->
       <div class="install-os">
-        <div class="install-os-header">
-          <span class="install-os-icon">🪟</span>
-          <span class="install-os-name">Windows (PowerShell)</span>
-        </div>
+        <div class="install-os-header"><span class="install-os-icon">🪟</span><span class="install-os-name">Windows (PowerShell)</span></div>
         <div class="install-steps">
-          <div class="install-step">
-            <div class="install-step-num">1</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Verify Node.js 18+</div>
-              <div class="install-step-desc">Open PowerShell and check your Node version.</div>
-              <div class="code-block">
-                <code>node --version</code>
-                <button class="copy-btn" onclick="copyCode(this,'node --version')">Copy</button>
-              </div>
-            </div>
-          </div>
-          <div class="install-step">
-            <div class="install-step-num">2</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Clone &amp; install dependencies</div>
-              <div class="install-step-desc">Clone the repo and install all npm packages.</div>
-              <div class="code-block" style="margin-bottom:.5rem">
-                <code>git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git</code>
-                <button class="copy-btn" onclick="copyCode(this,'git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git')">Copy</button>
-              </div>
-              <div class="code-block">
-                <code>cd teampulse; npm install</code>
-                <button class="copy-btn" onclick="copyCode(this,'cd teampulse; npm install')">Copy</button>
-              </div>
-            </div>
-          </div>
-          <div class="install-step">
-            <div class="install-step-num">3</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Configure your API key</div>
-              <div class="install-step-desc">Copy the example env file and add your API key.</div>
-              <div class="code-block" style="margin-bottom:.5rem">
-                <code>Copy-Item .env.example .env</code>
-                <button class="copy-btn" onclick="copyCode(this,'Copy-Item .env.example .env')">Copy</button>
-              </div>
-              <div class="install-optional">
-                Open <strong>.env</strong> and set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, or <strong>OPENAI_API_KEY</strong> — whichever provider you want to use.
-              </div>
-            </div>
-          </div>
-          <div class="install-step">
-            <div class="install-step-num">4</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Link globally</div>
-              <div class="install-step-desc">Make the <code style="font-family:var(--font-mono)">teampulse</code> command available system-wide.</div>
-              <div class="code-block">
-                <code>npm link</code>
-                <button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button>
-              </div>
-            </div>
-          </div>
-          <div class="install-step">
-            <div class="install-step-num">5</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Run your first analysis</div>
-              <div class="install-step-desc">Drop a transcript in the data folder and analyze it.</div>
-              <div class="code-block">
-                <code>teampulse analyze data/sample.txt</code>
-                <button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt')">Copy</button>
-              </div>
-            </div>
-          </div>
-          <div class="install-step">
-            <div class="install-step-num" style="background:var(--brown)">★</div>
-            <div class="install-step-content">
-              <div class="install-step-title">Optional: publish to npm</div>
-              <div class="install-step-desc">Share your fork on the npm registry.</div>
-              <div class="code-block" style="margin-bottom:.5rem">
-                <code>npm login</code>
-                <button class="copy-btn" onclick="copyCode(this,'npm login')">Copy</button>
-              </div>
-              <div class="code-block">
-                <code>npm publish --access public</code>
-                <button class="copy-btn" onclick="copyCode(this,'npm publish --access public')">Copy</button>
-              </div>
-            </div>
-          </div>
+          <div class="install-step"><div class="install-step-num">1</div><div class="install-step-content"><div class="install-step-title">Verify Node.js 18+</div><div class="install-step-desc">Open PowerShell and check your Node version.</div><div class="code-block"><code>node --version</code><button class="copy-btn" onclick="copyCode(this,'node --version')">Copy</button></div></div></div>
+          <div class="install-step"><div class="install-step-num">2</div><div class="install-step-content"><div class="install-step-title">Clone &amp; install</div><div class="install-step-desc">Clone the repo and install dependencies.</div><div class="code-block" style="margin-bottom:.4rem"><code>git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git</code><button class="copy-btn" onclick="copyCode(this,'git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git')">Copy</button></div><div class="code-block"><code>cd teampulse; npm install</code><button class="copy-btn" onclick="copyCode(this,'cd teampulse; npm install')">Copy</button></div></div></div>
+          <div class="install-step"><div class="install-step-num">3</div><div class="install-step-content"><div class="install-step-title">Configure API keys</div><div class="install-step-desc">Copy the env file and add your key.</div><div class="code-block" style="margin-bottom:.4rem"><code>Copy-Item .env.example .env</code><button class="copy-btn" onclick="copyCode(this,'Copy-Item .env.example .env')">Copy</button></div><div class="install-note">Set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, or <strong>OPENAI_API_KEY</strong> in <strong>.env</strong></div></div></div>
+          <div class="install-step"><div class="install-step-num">4</div><div class="install-step-content"><div class="install-step-title">Link globally</div><div class="install-step-desc">Make <code style="font-family:var(--font-mono)">teampulse</code> available system-wide.</div><div class="code-block"><code>npm link</code><button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button></div></div></div>
+          <div class="install-step"><div class="install-step-num">5</div><div class="install-step-content"><div class="install-step-title">First analysis</div><div class="install-step-desc">Drop a transcript in data/ and analyze it.</div><div class="code-block"><code>teampulse analyze data/sample.txt</code><button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt')">Copy</button></div></div></div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── CTA ───────────────────────────────────────────────────────────────────── -->
+<!-- CTA -->
 <div class="cta-section">
-  <div class="section-inner" style="text-align:center">
-    <h2 class="section-title">Stop re-discussing.<br>Start shipping.</h2>
-    <p class="section-sub">TeamPulse keeps every decision, task, and risk in check — across every meeting, every week.</p>
-    <div class="cta-actions">
-      <a href="#install" class="btn btn-primary">🚀 Install TeamPulse</a>
-      <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-outline" style="color:#F0E0C8;border-color:#3A2A1A" target="_blank">View on GitHub</a>
-    </div>
+  <h2 class="cta-title">Stop re-discussing.<br>Start shipping.</h2>
+  <p class="cta-sub">TeamPulse keeps every decision, task, and risk in check — across every meeting, every week.</p>
+  <div class="cta-actions">
+    <a href="#install" class="btn btn-primary">→ Install TeamPulse</a>
+    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-ghost" target="_blank">View on GitHub</a>
   </div>
 </div>
 
-<!-- ── Footer ────────────────────────────────────────────────────────────────── -->
+<!-- Footer -->
 <footer>
   <span class="footer-logo"><strong>Team</strong>Pulse</span>
   <div class="footer-links">
@@ -1274,14 +945,14 @@
     <a href="#features">Features</a>
     <a href="#install">Install</a>
   </div>
-  <p>Built with ❤️ for async teams</p>
+  <p>Built for async teams · v0.2.0</p>
 </footer>
 
 <script>
-  // Tab switching — terminal
+  // Terminal tabs
   document.querySelectorAll('.tab-bar .tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      const bar = tab.closest('.tab-bar');
+      const bar  = tab.closest('.tab-bar');
       const body = bar.nextElementSibling;
       bar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       body.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -1289,8 +960,7 @@
       body.querySelector('#' + tab.dataset.target)?.classList.add('active');
     });
   });
-
-  // Tab switching — app demo
+  // App tabs
   document.querySelectorAll('.app-tabs .app-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const tabs = tab.closest('.app-tabs');
@@ -1301,7 +971,6 @@
       body.querySelector('#' + tab.dataset.target)?.classList.add('active');
     });
   });
-
   // Copy buttons
   function copyCode(btn, text) {
     navigator.clipboard.writeText(text).then(() => {
