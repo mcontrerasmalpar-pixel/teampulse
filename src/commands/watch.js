@@ -1,46 +1,54 @@
-// ── watch command ─────────────────────────────────────────────────────────────
-import fs from 'fs';
-import path from 'path';
+import { watch } from 'fs';
+import { resolve, extname, basename } from 'path';
 import chalk from 'chalk';
 import { analyzeFile } from './analyze.js';
+import { resolveProvider, getProviderLabel } from '../services/provider.js';
+import { printError, printInfo, printSuccess, printWarn } from '../utils/ui.js';
 
 export async function watchCommand(dir, options) {
-  const { provider = 'gemini', model, filter } = options;
-  const dirPath = path.resolve(dir || '.');
+  const { provider = 'gemini', model: modelOverride, skill = 'product-manager' } = options;
+  const { name: provName, model } = resolveProvider(provider, modelOverride);
+  const provLabel = getProviderLabel(provName, model);
 
-  if (!fs.existsSync(dirPath)) {
-    console.error(chalk.red(`✗ Directory not found: ${dirPath}`));
-    process.exit(1);
-  }
+  const fullDir = resolve(dir || '.');
 
-  console.log(chalk.dim(`\n👁  Watching for new transcripts in ${chalk.cyan(dirPath)} … (Ctrl+C to stop)\n`));
+  console.log(`\n${chalk.bold.cyan('  ● Watch mode')} ${chalk.dim(`── monitoring ${fullDir}`)}`);
+  printInfo(`Provider: ${chalk.cyan(provLabel)}  ·  Skill: ${chalk.cyan(skill)}`);
+  printInfo('Watching for new .txt files — press Ctrl+C to stop\n');
 
-  const seen = new Set(
-    fs.readdirSync(dirPath).filter(f => f.endsWith('.txt'))
-  );
+  const processing = new Set();
 
-  fs.watch(dirPath, async (eventType, filename) => {
-    if (!filename || !filename.endsWith('.txt') || seen.has(filename)) return;
-    seen.add(filename);
+  const watcher = watch(fullDir, { persistent: true }, async (event, filename) => {
+    if (!filename || extname(filename) !== '.txt') return;
+    if (processing.has(filename)) return;
 
-    const filePath = path.join(dirPath, filename);
-    // Small delay to ensure file is fully written
-    await new Promise(r => setTimeout(r, 600));
+    const filePath = resolve(fullDir, filename);
+    processing.add(filename);
 
-    if (!fs.existsSync(filePath)) return;
+    // Small debounce — wait for file write to complete
+    await new Promise(r => setTimeout(r, 500));
 
-    console.log(chalk.dim(`\n▶ New file detected: ${chalk.cyan(filename)}`));
+    console.log(`\n  ${chalk.cyan('▶')} Detected: ${chalk.white(filename)}`);
+
     try {
-      const result = await analyzeFile(filePath, { provider, model, filter, silent: false });
-      const d = result.decisions?.length || 0;
-      const t = result.tasks?.length     || 0;
-      const r = result.risks?.length      || 0;
-      console.log(chalk.green(`  ✓ ${filename}`) + chalk.dim(` → ${d}d · ${t}t · ${r}r`));
+      const analysis = await analyzeFile(filePath, { provider: provName, model, skill, silent: true });
+      printSuccess(`Analyzed: ${basename(filename)}  ·  ${chalk.dim(analysis.title || '')}`);
+      if (analysis.tasks?.length)     printInfo(`  ${analysis.tasks.length} task(s) extracted`);
+      if (analysis.decisions?.length) printInfo(`  ${analysis.decisions.length} decision(s) extracted`);
+      if (analysis.risks?.length)     printInfo(`  ${analysis.risks.length} risk(s) detected`);
+      console.log(chalk.dim(`  Run ${chalk.cyan('teampulse chat')} to explore.`));
     } catch (err) {
-      console.error(chalk.red(`  ✗ Failed: ${err.message}`));
+      printError(`Failed to analyze ${filename}: ${err.message}`);
+    } finally {
+      processing.delete(filename);
     }
   });
 
-  // Keep alive
-  process.stdin.resume();
+  watcher.on('error', err => printError(`Watcher error: ${err.message}`));
+
+  process.on('SIGINT', () => {
+    watcher.close();
+    console.log(chalk.dim('\n\n  Watch mode stopped.\n'));
+    process.exit(0);
+  });
 }

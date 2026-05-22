@@ -1,91 +1,128 @@
-// ── batch command ─────────────────────────────────────────────────────────────
-import fs from 'fs';
-import path from 'path';
+import { readdirSync, statSync } from 'fs';
+import { resolve, basename, extname } from 'path';
 import chalk from 'chalk';
+import ora from 'ora';
 import { analyzeFile } from './analyze.js';
+import { resolveProvider, getProviderLabel } from '../services/provider.js';
+import { printError, printInfo, printSection, printSuccess, printWarn } from '../utils/ui.js';
 
 export async function batchCommand(dir, options) {
-  const { since, filter, title, provider = 'gemini', model } = options;
+  const { provider = 'gemini', model: modelOverride, skill = 'product-manager', since, filter, title } = options;
+  const { name: provName, model } = resolveProvider(provider, modelOverride);
+  const provLabel = getProviderLabel(provName, model);
 
-  // Resolve directory
-  const dirPath = path.resolve(dir || '.');
-  if (!fs.existsSync(dirPath)) {
-    console.error(chalk.red(`✗ Directory not found: ${dirPath}`));
+  const fullDir = resolve(dir);
+
+  let files;
+  try {
+    files = readdirSync(fullDir)
+      .filter(f => extname(f) === '.txt')
+      .map(f => resolve(fullDir, f));
+  } catch (err) {
+    printError(`Cannot read directory: ${err.message}`);
     process.exit(1);
   }
 
-  // Get .txt files
-  let files = fs.readdirSync(dirPath)
-    .filter(f => f.endsWith('.txt'))
-    .map(f => path.join(dirPath, f));
+  if (files.length === 0) {
+    printWarn(`No .txt files found in ${fullDir}`);
+    process.exit(0);
+  }
 
-  // Filter by --since date
+  // --since filter
   if (since) {
     const sinceDate = new Date(since);
     if (isNaN(sinceDate)) {
-      console.error(chalk.red(`✗ Invalid date format for --since: ${since}. Use YYYY-MM-DD`));
+      printError(`Invalid date for --since: ${since}. Use YYYY-MM-DD.`);
       process.exit(1);
     }
-    files = files.filter(f => {
-      const stat = fs.statSync(f);
-      return stat.mtime >= sinceDate;
+    files = files.filter(f => statSync(f).mtime >= sinceDate);
+    if (files.length === 0) {
+      printWarn(`No .txt files found modified after ${since}`);
+      process.exit(0);
+    }
+  }
+
+  const label = title ? chalk.bold.white(` — ${title}`) : '';
+  console.log(`\n${chalk.bold.cyan('  Batch Analysis')}${label}`);
+  printInfo(`Found ${files.length} transcript(s) in ${chalk.dim(fullDir)}`);
+  printInfo(`Provider: ${chalk.cyan(provLabel)}  ·  Skill: ${chalk.cyan(skill)}`);
+  if (since) printInfo(`Since: ${since}`);
+  console.log();
+
+  const results = [];
+  let passed = 0;
+  let failed = 0;
+
+  for (const filePath of files) {
+    const name = basename(filePath);
+    const spinner = ora({
+      text: chalk.dim(`Analyzing ${chalk.cyan(name)}...`),
+      color: 'cyan',
+      indent: 2
+    }).start();
+
+    try {
+      const analysis = await analyzeFile(filePath, { provider: provName, model, skill });
+      spinner.succeed(chalk.green(`✓ ${name}`));
+      results.push({ file: name, ...analysis });
+      passed++;
+    } catch (err) {
+      spinner.fail(chalk.red(`✗ ${name}: ${err.message}`));
+      failed++;
+    }
+  }
+
+  // ── Consolidated output ──────────────────────────────────────────────────
+  console.log(`\n${chalk.bold.cyan('  ── Batch Summary ──')}`);
+  printInfo(`${chalk.green(`${passed} succeeded`)}  ${failed > 0 ? chalk.red(`${failed} failed`) : ''}`);
+
+  const allDecisions = results.flatMap(r => (r.decisions || []).map(d => ({ ...d, _file: r.file })));
+  const allTasks     = results.flatMap(r => (r.tasks     || []).map(t => ({ ...t, _file: r.file })));
+  const allRisks     = results.flatMap(r => (r.risks     || []).map(k => ({ ...k, _file: r.file })));
+
+  const show = f => !filter || filter === f;
+
+  if (show('decision') && allDecisions.length) {
+    printSection(`Decisions (${allDecisions.length} total)`, '', 'cyan');
+    allDecisions.forEach(d => {
+      console.log(
+        `  ${chalk.bold(d.title)}` +
+        chalk.dim(` [${d._file}]`) +
+        `  ${chalk.dim('owner:')} ${d.owner || chalk.red('⚠ none')}` +
+        `  ${chalk.dim('status:')} ${d.status || '—'}`
+      );
     });
   }
 
-  if (files.length === 0) {
-    console.log(chalk.yellow('⚠ No transcript files found matching criteria.'));
-    return;
+  if (show('task') && allTasks.length) {
+    printSection(`Tasks (${allTasks.length} total)`, '', 'yellow');
+    const unassigned = allTasks.filter(t => !t.owner);
+    allTasks.forEach(t => {
+      const pColor = t.priority === 'high' ? 'red' : t.priority === 'medium' ? 'yellow' : 'dim';
+      console.log(
+        `  ${chalk.dim('○')} ${t.description}` +
+        chalk.dim(` [${t._file}]`) +
+        `  ${chalk.dim('owner:')} ${t.owner || chalk.red('⚠ none')}` +
+        `  ${chalk[pColor](`[${t.priority}]`)}`
+      );
+    });
+    if (unassigned.length)
+      console.log(`\n  ${chalk.red('⚠')} ${chalk.yellow(`${unassigned.length} unassigned task(s) across all meetings`)}`);
   }
 
-  const label = title ? chalk.bold(`[${title}] `) : '';
-  console.log(chalk.dim(`\n📦 ${label}Batch processing ${files.length} file(s)…\n`));
-
-  let totalDecisions = 0, totalTasks = 0, totalRisks = 0;
-  const results = [];
-
-  for (const filePath of files) {
-    const fileName = path.basename(filePath);
-    process.stdout.write(chalk.dim(`  → ${fileName} … `));
-    try {
-      const result = await analyzeFile(filePath, { provider, model, filter, silent: true });
-      totalDecisions += result.decisions?.length || 0;
-      totalTasks     += result.tasks?.length     || 0;
-      totalRisks     += result.risks?.length      || 0;
-      results.push({ file: fileName, ...result });
-      console.log(chalk.green('✓'));
-    } catch (err) {
-      console.log(chalk.red(`✗ ${err.message}`));
-    }
+  if (show('risk') && allRisks.length) {
+    printSection(`Risks (${allRisks.length} total)`, '', 'red');
+    allRisks.forEach(r => {
+      const lColor = r.level === 'high' ? 'red' : r.level === 'medium' ? 'yellow' : 'dim';
+      console.log(
+        `  ${chalk[lColor](`[${r.level?.toUpperCase()}]`)} ${r.description}` +
+        chalk.dim(` [${r._file}]`)
+      );
+    });
   }
 
-  // Summary
+  if (results.length > 0)
+    printInfo(`Run ${chalk.cyan('teampulse chat')} to explore all analyzed meetings interactively.`);
+
   console.log();
-  console.log(chalk.bold('─'.repeat(48)));
-  if (title) console.log(chalk.cyan.bold(`  ${title}`));
-  console.log(chalk.bold(`  ${files.length} meetings processed`));
-  console.log();
-
-  if (!filter || filter === 'decision') {
-    console.log(chalk.blue.bold(`  DECISIONS  (${totalDecisions})`));
-    results.forEach(r => r.decisions?.forEach(d =>
-      console.log(`    › ${d.text}  ${chalk.dim(`[${d.owner || '?'}]`)}`))
-    );
-    console.log();
-  }
-  if (!filter || filter === 'task') {
-    console.log(chalk.yellow.bold(`  TASKS  (${totalTasks})`));
-    results.forEach(r => r.tasks?.forEach(t =>
-      console.log(`    › ${t.text}  ${chalk.dim(`[${t.owner || '?'}] [${t.due || 'no due'}]`)}`))
-    );
-    console.log();
-  }
-  if (!filter || filter === 'risk') {
-    console.log(chalk.red.bold(`  RISKS  (${totalRisks})`));
-    results.forEach(r => r.risks?.forEach(risk =>
-      console.log(`    › ${risk.text}  ${chalk.dim(`[${risk.status || 'open'}]`)}`))
-    );
-    console.log();
-  }
-
-  console.log(chalk.bold('─'.repeat(48)));
 }
