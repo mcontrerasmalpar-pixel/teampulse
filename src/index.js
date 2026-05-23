@@ -16,15 +16,15 @@ printBanner();
 
 program
   .name('teampulse')
-  .description('Terminal-first meeting intelligence — Gemini · Claude · GPT-4')
+  .description('Terminal-first meeting intelligence — Gemini · Claude · GPT-4 · Mistral · Ollama')
   .version('0.2.0');
 
 // ── analyze ───────────────────────────────────────────────────────────────────
 program
   .command('analyze [file]')
   .description('Analyze a transcript file (or watch a folder with --watch)')
-  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
-  .option('-m, --model <name>',    'Override model name (e.g. gpt-4o-mini)')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai | mistral | ollama', 'gemini')
+  .option('-m, --model <name>',    'Override model name (e.g. mistral-large, llama3, gpt-4o-mini)')
   .option('-s, --skill <skill>',   'Role skill: product-manager | developer | founder | marketing', 'product-manager')
   .option('-f, --format <format>', 'Output format: plain | json | markdown', 'plain')
   .option('-o, --output <file>',   'Save output to file')
@@ -47,7 +47,7 @@ program
 program
   .command('batch [dir]')
   .description('Analyze all transcripts in a directory')
-  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai | mistral | ollama', 'gemini')
   .option('-m, --model <name>',    'Override model name')
   .option('-s, --skill <skill>',   'Role skill: product-manager | developer | founder | marketing', 'product-manager')
   .option('--since <date>',        'Only files modified after this date (YYYY-MM-DD)')
@@ -59,7 +59,7 @@ program
 program
   .command('watch [dir]')
   .description('Monitor a folder and auto-analyze new .txt transcripts')
-  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai | mistral | ollama', 'gemini')
   .option('-m, --model <name>',    'Override model name')
   .option('-s, --skill <skill>',   'Role skill', 'product-manager')
   .action(watchCommand);
@@ -68,7 +68,7 @@ program
 program
   .command('chat')
   .description('Interactive REPL over your meeting history')
-  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai | mistral | ollama', 'gemini')
   .option('-m, --model <name>',    'Override model name')
   .option('--meeting <id>',        'Focus on a specific meeting ID')
   .action(chatCommand);
@@ -77,7 +77,7 @@ program
 program
   .command('drift [idA] [idB]')
   .description('Compare two meetings and surface decision drift')
-  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai | mistral | ollama', 'gemini')
   .option('-m, --model <name>',    'Override model name')
   .option('-l, --last <n>',        'Auto-compare the N most recent meetings')
   .action(driftCommand);
@@ -86,7 +86,7 @@ program
 program
   .command('watchdog')
   .description('Scan all meetings for recurring risks and ownerless tasks')
-  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai', 'gemini')
+  .option('-p, --provider <name>', 'AI provider: gemini | claude | openai | mistral | ollama', 'gemini')
   .option('-m, --model <name>',    'Override model name')
   .option('-t, --team <name>',     'Filter by team name or keyword')
   .action(watchdogCommand);
@@ -106,19 +106,28 @@ program
 
 program.addHelpText('after', `
 ${chalk.bold('Providers:')}
-  ${chalk.cyan('gemini')}   free tier · aistudio.google.com/app/apikey
-  ${chalk.cyan('claude')}   paid      · console.anthropic.com
-  ${chalk.cyan('openai')}   paid      · platform.openai.com/api-keys
+  ${chalk.cyan('gemini')}   free tier  · aistudio.google.com/app/apikey       → GEMINI_API_KEY
+  ${chalk.cyan('claude')}   paid       · console.anthropic.com                → ANTHROPIC_API_KEY
+  ${chalk.cyan('openai')}   paid       · platform.openai.com/api-keys         → OPENAI_API_KEY
+  ${chalk.cyan('mistral')}  paid       · console.mistral.ai                   → MISTRAL_API_KEY
+  ${chalk.cyan('ollama')}   local/free · ollama.com — no API key required
+
+${chalk.bold('Local setup (Ollama):')}
+  ${chalk.dim('ollama serve')}                              start the local server
+  ${chalk.dim('ollama pull mistral')}                       download mistral model
+  ${chalk.dim('ollama pull llama3')}                        download llama3 model
 
 ${chalk.bold('Examples:')}
   ${chalk.cyan('teampulse analyze sprint-review.txt')}
   ${chalk.cyan('teampulse analyze meeting.txt --provider claude --skill developer')}
   ${chalk.cyan('teampulse analyze meeting.txt --provider openai --model gpt-4o-mini')}
+  ${chalk.cyan('teampulse analyze meeting.txt --provider mistral --model mistral-large')}
+  ${chalk.cyan('teampulse analyze meeting.txt --provider ollama --model mistral')}
   ${chalk.cyan('teampulse batch ./meetings/ --provider claude --since 2026-05-01')}
-  ${chalk.cyan('teampulse watch ./transcripts/ --provider openai')}
-  ${chalk.cyan('teampulse drift --last 2 --provider claude')}
+  ${chalk.cyan('teampulse watch ./transcripts/ --provider ollama --model llama3')}
+  ${chalk.cyan('teampulse drift --last 2 --provider mistral')}
   ${chalk.cyan('teampulse watchdog --provider gemini --team growth')}
-  ${chalk.cyan('teampulse chat --provider claude')}
+  ${chalk.cyan('teampulse chat --provider ollama --model mistral')}
   ${chalk.cyan('teampulse init')}
 `);
 
