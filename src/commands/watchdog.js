@@ -1,9 +1,11 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import ora from 'ora';
 import { getAllMeetings, initDB } from '../utils/memory.js';
 import { callProvider, resolveProvider, getProviderLabel } from '../services/provider.js';
-import { printError, printInfo, printSection, printWarn } from '../utils/ui.js';
+import {
+  printError, printInfo, printSection, printWarn,
+  printProviderTag, printTiming, printProviderError, createSpinner
+} from '../utils/ui.js';
 
 function buildWatchdogPrompt(summaries) {
   return `You are a meeting intelligence watchdog scanning ${summaries.length} meeting record(s) for systemic issues.
@@ -74,28 +76,25 @@ export async function watchdogCommand(options) {
   const teamFilter = options.team || null;
 
   console.log('\n' + chalk.bold.cyan('  Watchdog — Recurring Risk Monitor') + '\n');
+  printProviderTag(provName, model);
   const total = allMeetings.length;
   const capped = total > 20 ? chalk.dim(` (showing 20 most recent of ${total})`) : '';
   printInfo(`Scanning ${meetings.length} meeting(s)${capped}${teamFilter ? ` for team: ${chalk.cyan(teamFilter)}` : ''}...`);
-
-  const spinner = ora({
-    text: chalk.dim(`Running watchdog scan via ${chalk.cyan(getProviderLabel(provName, model))}...`),
-    color: 'cyan', indent: 2
-  }).start();
 
   const filtered = teamFilter
     ? meetings.filter(m => JSON.stringify(m.analysis).toLowerCase().includes(teamFilter.toLowerCase()))
     : meetings;
 
   const summaries = filtered.map(m => ({
-    id: m.id,
-    title: m.title,
-    date: m.analyzedAt,
+    id: m.id, title: m.title, date: m.analyzedAt,
     tasks: m.analysis?.tasks || [],
     risks: m.analysis?.risks || [],
     decisions: m.analysis?.decisions || [],
     participants: m.analysis?.participants || []
   }));
+
+  const spinner = createSpinner('Running watchdog scan…');
+  const startMs = Date.now();
 
   let report;
   try {
@@ -108,8 +107,10 @@ export async function watchdogCommand(options) {
       else throw new Error('Invalid JSON returned for watchdog scan.');
     }
     spinner.succeed(chalk.green(`Watchdog scan complete · ${getProviderLabel(provName, model)}`));
+    printTiming(startMs);
   } catch (err) {
     spinner.fail(chalk.red('Watchdog scan failed'));
+    printProviderError(provName);
     printError(err.message);
     process.exit(1);
   }

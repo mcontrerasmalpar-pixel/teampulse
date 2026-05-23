@@ -1,12 +1,12 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve, basename } from 'path';
-import ora from 'ora';
 import chalk from 'chalk';
 import { callProvider, resolveProvider, getProviderLabel } from '../services/provider.js';
 import { saveMeeting, generateMeetingId, initDB } from '../utils/memory.js';
 import {
   printSection, printDecision, printTask, printRisk,
-  printSuccess, printError, printInfo
+  printSuccess, printError, printInfo,
+  printProviderTag, printTiming, printProviderError, createSpinner
 } from '../utils/ui.js';
 
 // ── analyzeFile: shared helper used by batch + watch ─────────────────────────
@@ -37,17 +37,13 @@ export async function analyzeFile(filePath, opts = {}) {
   const filename = basename(filePath);
   const meetingId = generateMeetingId(filename);
   const meetingRecord = {
-    id: meetingId,
-    filename,
-    skill,
-    provider: provName,
-    model,
+    id: meetingId, filename, skill,
+    provider: provName, model,
     analyzedAt: new Date().toISOString(),
     title: analysis.title || filename,
     analysis
   };
   await saveMeeting(meetingRecord);
-
   return { meetingId, ...analysis };
 }
 
@@ -78,11 +74,14 @@ export async function analyzeCommand(filePath, options) {
 
   await initDB();
   const filename = basename(filePath);
-  const spinner = ora({
-    text: chalk.dim(`Analyzing ${chalk.cyan(filename)} via ${chalk.cyan(getProviderLabel(provName, model))} · skill: ${chalk.cyan(skill)}...`),
-    color: 'cyan'
-  }).start();
 
+  printProviderTag(provName, model);
+
+  const spinner = createSpinner(
+    `Analyzing ${chalk.cyan(filename)} · skill: ${chalk.cyan(skill)}…`
+  );
+
+  const startMs = Date.now();
   let analysis;
   try {
     const prompt = buildAnalysisPrompt(transcript, skill);
@@ -95,19 +94,18 @@ export async function analyzeCommand(filePath, options) {
       else throw new Error(`${provName} returned invalid JSON. Check your API key and transcript format.`);
     }
     spinner.succeed(chalk.green(`Analysis complete · ${getProviderLabel(provName, model)}`));
+    printTiming(startMs);
   } catch (err) {
     spinner.fail(chalk.red('Analysis failed'));
+    printProviderError(provName);
     printError(err.message);
     process.exit(1);
   }
 
   const meetingId = generateMeetingId(filename);
   const meetingRecord = {
-    id: meetingId,
-    filename,
-    skill,
-    provider: provName,
-    model,
+    id: meetingId, filename, skill,
+    provider: provName, model,
     analyzedAt: new Date().toISOString(),
     title: analysis.title || filename,
     analysis
@@ -129,7 +127,7 @@ export async function analyzeCommand(filePath, options) {
     return;
   }
 
-  // ── Plain ─────────────────────────────────────────────────────────────────
+  // ── Plain ───────────────────────────────────────────────────────────────────────
   console.log();
   console.log(chalk.bold.white(`  ${analysis.title || filename}`));
   console.log(chalk.dim(`  ${new Date().toLocaleDateString()}  ·  skill: ${skill}  ·  id: ${meetingId}  ·  ${getProviderLabel(provName, model)}`));
@@ -172,7 +170,7 @@ export async function analyzeCommand(filePath, options) {
   }
 }
 
-// ── Shared prompt builder ─────────────────────────────────────────────────────
+// ── Shared prompt builder ───────────────────────────────────────────────────────────
 function buildAnalysisPrompt(transcript, skill = 'product-manager') {
   const skillContext = SKILL_PROMPTS[skill] || SKILL_PROMPTS['product-manager'];
   return `${skillContext}
@@ -221,8 +219,8 @@ function sentimentBadge(sentiment) {
   const map = {
     positive: chalk.green('● positive'),
     negative: chalk.red('● negative'),
-    neutral: chalk.dim('● neutral'),
-    mixed: chalk.yellow('● mixed')
+    neutral:  chalk.dim('● neutral'),
+    mixed:    chalk.yellow('● mixed')
   };
   return map[sentiment] || chalk.dim('● unknown');
 }
@@ -240,12 +238,9 @@ function toMarkdown(id, a, skill) {
     `meeting_id: ${id}`,
     `sentiment: ${a.sentiment || 'unknown'}`,
     `analyzed_at: ${now.toISOString()}`,
-    '---',
-    '',
-    `# ${a.title || 'Meeting Notes'}`,
-    '',
-    `> **Meeting ID:** \`${id}\` · **Date:** ${dateStr} · **Skill:** ${skill || 'product-manager'}`,
-    '',
+    '---', '',
+    `# ${a.title || 'Meeting Notes'}`, '',
+    `> **Meeting ID:** \`${id}\` · **Date:** ${dateStr} · **Skill:** ${skill || 'product-manager'}`, '',
   ];
 
   if (unassigned.length > 0) {
@@ -262,7 +257,7 @@ function toMarkdown(id, a, skill) {
     a.decisions.forEach(d => {
       lines.push(
         `### ${d.title}`, '',
-        `| Field | Value |`, `|-------|-------|`,
+        '| Field | Value |', '|-------|-------|',
         `| **Owner** | ${d.owner || '⚠ unassigned'} |`,
         `| **Status** | ${d.status} |`, '',
         d.context, ''
@@ -313,8 +308,8 @@ function toMarkdown(id, a, skill) {
 }
 
 const SKILL_PROMPTS = {
-  'product-manager': `You are analyzing this meeting as a product manager. Prioritize: feature decisions, user impact, roadmap implications, delivery risks, and ownership clarity.`,
-  'developer': `You are analyzing this meeting as a senior engineer. Prioritize: technical decisions, architecture implications, blockers, technical debt, and realistic deadlines.`,
-  'founder': `You are analyzing this meeting as a founder/CEO. Prioritize: strategic decisions, resource allocation, team alignment, market risks, and high-level outcomes.`,
-  'marketing': `You are analyzing this meeting as a marketing lead. Prioritize: campaign decisions, messaging, launch timelines, audience insights, and cross-team dependencies.`
+  'product-manager': 'You are analyzing this meeting as a product manager. Prioritize: feature decisions, user impact, roadmap implications, delivery risks, and ownership clarity.',
+  'developer':       'You are analyzing this meeting as a senior engineer. Prioritize: technical decisions, architecture implications, blockers, technical debt, and realistic deadlines.',
+  'founder':         'You are analyzing this meeting as a founder/CEO. Prioritize: strategic decisions, resource allocation, team alignment, market risks, and high-level outcomes.',
+  'marketing':       'You are analyzing this meeting as a marketing lead. Prioritize: campaign decisions, messaging, launch timelines, audience insights, and cross-team dependencies.'
 };

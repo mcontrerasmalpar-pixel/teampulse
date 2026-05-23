@@ -1,10 +1,12 @@
 import { readdirSync, statSync } from 'fs';
 import { resolve, basename, extname } from 'path';
 import chalk from 'chalk';
-import ora from 'ora';
 import { analyzeFile } from './analyze.js';
 import { resolveProvider, getProviderLabel } from '../services/provider.js';
-import { printError, printInfo, printSection, printSuccess, printWarn } from '../utils/ui.js';
+import {
+  printError, printInfo, printSection, printSuccess, printWarn,
+  printProviderTag, printTiming, printProviderError, createSpinner
+} from '../utils/ui.js';
 
 export async function batchCommand(dir, options) {
   const { provider = 'gemini', model: modelOverride, skill = 'product-manager', since, filter, title } = options;
@@ -28,7 +30,6 @@ export async function batchCommand(dir, options) {
     process.exit(0);
   }
 
-  // --since filter
   if (since) {
     const sinceDate = new Date(since);
     if (isNaN(sinceDate)) {
@@ -44,23 +45,20 @@ export async function batchCommand(dir, options) {
 
   const label = title ? chalk.bold.white(` — ${title}`) : '';
   console.log(`\n${chalk.bold.cyan('  Batch Analysis')}${label}`);
+  printProviderTag(provName, model);
   printInfo(`Found ${files.length} transcript(s) in ${chalk.dim(fullDir)}`);
-  printInfo(`Provider: ${chalk.cyan(provLabel)}  ·  Skill: ${chalk.cyan(skill)}`);
+  printInfo(`Skill: ${chalk.cyan(skill)}`);
   if (since) printInfo(`Since: ${since}`);
   console.log();
 
   const results = [];
   let passed = 0;
   let failed = 0;
+  const startMs = Date.now();
 
   for (const filePath of files) {
     const name = basename(filePath);
-    const spinner = ora({
-      text: chalk.dim(`Analyzing ${chalk.cyan(name)}...`),
-      color: 'cyan',
-      indent: 2
-    }).start();
-
+    const spinner = createSpinner(`Analyzing ${chalk.cyan(name)}…`);
     try {
       const analysis = await analyzeFile(filePath, { provider: provName, model, skill });
       spinner.succeed(chalk.green(`✓ ${name}`));
@@ -68,13 +66,15 @@ export async function batchCommand(dir, options) {
       passed++;
     } catch (err) {
       spinner.fail(chalk.red(`✗ ${name}: ${err.message}`));
+      printProviderError(provName);
       failed++;
     }
   }
 
-  // ── Consolidated output ──────────────────────────────────────────────────
+  // ── Consolidated output ─────────────────────────────────────────────────────────
   console.log(`\n${chalk.bold.cyan('  ── Batch Summary ──')}`);
   printInfo(`${chalk.green(`${passed} succeeded`)}  ${failed > 0 ? chalk.red(`${failed} failed`) : ''}`);
+  printTiming(startMs);
 
   const allDecisions = results.flatMap(r => (r.decisions || []).map(d => ({ ...d, _file: r.file })));
   const allTasks     = results.flatMap(r => (r.tasks     || []).map(t => ({ ...t, _file: r.file })));

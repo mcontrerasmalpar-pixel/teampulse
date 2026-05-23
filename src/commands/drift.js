@@ -1,9 +1,11 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import ora from 'ora';
 import { getMeetingById, getMeetings, initDB } from '../utils/memory.js';
 import { callProvider, resolveProvider, getProviderLabel } from '../services/provider.js';
-import { printError, printInfo, printSection, printWarn } from '../utils/ui.js';
+import {
+  printError, printInfo, printSection, printWarn,
+  printProviderTag, printTiming, printProviderError, createSpinner
+} from '../utils/ui.js';
 
 function buildDriftPrompt(meetingA, meetingB) {
   return `You are a meeting intelligence agent comparing two meeting records to detect decision drift and recurring issues.
@@ -84,11 +86,10 @@ export async function driftCommand(idA, idB, options) {
 
   console.log('\n' + chalk.bold.cyan('  Decision Drift Analysis') + '\n');
   printInfo(`Comparing: ${chalk.white(meetingA.title)} → ${chalk.white(meetingB.title)}`);
+  printProviderTag(provName, model);
 
-  const spinner = ora({
-    text: chalk.dim(`Analyzing drift via ${chalk.cyan(getProviderLabel(provName, model))}...`),
-    color: 'cyan', indent: 2
-  }).start();
+  const spinner = createSpinner(`Analyzing drift…`);
+  const startMs = Date.now();
 
   let drift;
   try {
@@ -101,8 +102,10 @@ export async function driftCommand(idA, idB, options) {
       else throw new Error('Invalid JSON returned for drift comparison.');
     }
     spinner.succeed(chalk.green(`Drift analysis complete · ${getProviderLabel(provName, model)}`));
+    printTiming(startMs);
   } catch (err) {
     spinner.fail(chalk.red('Drift analysis failed'));
+    printProviderError(provName);
     printError(err.message);
     process.exit(1);
   }
@@ -123,7 +126,6 @@ export async function driftCommand(idA, idB, options) {
       colWidths: [28, 24, 24, 12, 7],
       wordWrap: true
     });
-
     drift.driftItems.forEach(item => {
       const typeColor = { resolved: 'green', regressed: 'red', recurring: 'yellow', abandoned: 'red', new: 'dim' }[item.driftType] || 'white';
       const scoreVal = item.driftScore ?? 0;

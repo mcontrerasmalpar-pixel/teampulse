@@ -3,17 +3,17 @@ import { resolve, extname, basename } from 'path';
 import chalk from 'chalk';
 import { analyzeFile } from './analyze.js';
 import { resolveProvider, getProviderLabel } from '../services/provider.js';
-import { printError, printInfo, printSuccess, printWarn } from '../utils/ui.js';
+import { printError, printInfo, printSuccess, printWarn, printProviderTag } from '../utils/ui.js';
 
 export async function watchCommand(dir, options) {
   const { provider = 'gemini', model: modelOverride, skill = 'product-manager' } = options;
   const { name: provName, model } = resolveProvider(provider, modelOverride);
-  const provLabel = getProviderLabel(provName, model);
 
   const fullDir = resolve(dir || '.');
 
   console.log(`\n${chalk.bold.cyan('  ● Watch mode')} ${chalk.dim(`── monitoring ${fullDir}`)}`);
-  printInfo(`Provider: ${chalk.cyan(provLabel)}  ·  Skill: ${chalk.cyan(skill)}`);
+  printProviderTag(provName, model);
+  printInfo(`Skill: ${chalk.cyan(skill)}`);
   printInfo('Watching for new .txt files — press Ctrl+C to stop\n');
 
   const processing = new Set();
@@ -25,7 +25,6 @@ export async function watchCommand(dir, options) {
     const filePath = resolve(fullDir, filename);
     processing.add(filename);
 
-    // Small debounce — wait for file write to complete
     await new Promise(r => setTimeout(r, 500));
 
     console.log(`\n  ${chalk.cyan('▶')} Detected: ${chalk.white(filename)}`);
