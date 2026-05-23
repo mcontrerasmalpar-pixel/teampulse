@@ -32,7 +32,6 @@ export async function initCommand() {
 
   const maskKey = (k) => k ? `${k.slice(0, 8)}…` : '';
 
-  // ── Step 1: provider ───────────────────────────────────────────────────────────
   const { defaultProvider } = await inquirer.prompt([
     {
       type: 'list',
@@ -49,45 +48,51 @@ export async function initCommand() {
     },
   ]);
 
-  // ── Step 2: API keys (skip Ollama section for ollama-only users) ────────────────────
-  const keyPrompts = [
+  const keyAnswers = await inquirer.prompt([
     {
-      type: 'input',
+      type: 'password',
       name: 'geminiKey',
+      mask: '*',
       message: existing.gemini
         ? `GEMINI_API_KEY (current: ${maskKey(existing.gemini)} — leave blank to keep):`
         : 'GEMINI_API_KEY (free key at aistudio.google.com/app/apikey — leave blank to skip):',
-      default: existing.gemini || '',
+      default: '',
     },
     {
-      type: 'input',
+      type: 'password',
       name: 'anthropicKey',
+      mask: '*',
       message: existing.anthropic
         ? `ANTHROPIC_API_KEY (current: ${maskKey(existing.anthropic)} — leave blank to keep):`
         : 'ANTHROPIC_API_KEY (optional — leave blank to skip):',
-      default: existing.anthropic || '',
+      default: '',
     },
     {
-      type: 'input',
+      type: 'password',
       name: 'openaiKey',
+      mask: '*',
       message: existing.openai
         ? `OPENAI_API_KEY (current: ${maskKey(existing.openai)} — leave blank to keep):`
         : 'OPENAI_API_KEY (optional — leave blank to skip):',
-      default: existing.openai || '',
+      default: '',
     },
     {
-      type: 'input',
+      type: 'password',
       name: 'mistralKey',
+      mask: '*',
       message: existing.mistral
         ? `MISTRAL_API_KEY (current: ${maskKey(existing.mistral)} — leave blank to keep):`
         : 'MISTRAL_API_KEY (optional — get one at console.mistral.ai):',
-      default: existing.mistral || '',
+      default: '',
     },
-  ];
+  ]);
 
-  const keyAnswers = await inquirer.prompt(keyPrompts);
+  // Use existing values when user left input blank
+  const geminiKey    = keyAnswers.geminiKey    || existing.gemini    || '';
+  const anthropicKey = keyAnswers.anthropicKey || existing.anthropic || '';
+  const openaiKey    = keyAnswers.openaiKey    || existing.openai    || '';
+  const mistralKey   = keyAnswers.mistralKey   || existing.mistral   || '';
 
-  // ── Step 3: Ollama config (always shown, even if not default provider) ─────────────
   const ollamaAnswers = await inquirer.prompt([
     {
       type: 'input',
@@ -103,7 +108,6 @@ export async function initCommand() {
     },
   ]);
 
-  // ── Step 4: skill + team ──────────────────────────────────────────────────────
   const prefsAnswers = await inquirer.prompt([
     {
       type: 'list',
@@ -132,7 +136,6 @@ export async function initCommand() {
   ]);
 
   const { defaultSkill, teamName, confirmed } = prefsAnswers;
-  const { geminiKey, anthropicKey, openaiKey, mistralKey } = keyAnswers;
   const { ollamaHost, ollamaModel } = ollamaAnswers;
 
   if (!confirmed) {
@@ -140,7 +143,6 @@ export async function initCommand() {
     return;
   }
 
-  // ── Write .env ───────────────────────────────────────────────────────────────────
   const lines = [
     geminiKey    ? `GEMINI_API_KEY=${geminiKey}`         : null,
     anthropicKey ? `ANTHROPIC_API_KEY=${anthropicKey}`   : null,
@@ -155,14 +157,14 @@ export async function initCommand() {
   ].filter(Boolean).join('\n') + '\n';
 
   try {
-    writeFileSync(envPath, lines, 'utf-8');
-    printSuccess('.env file written');
+    // 0o600 — only the owner can read/write .env (no group/world access)
+    writeFileSync(envPath, lines, { encoding: 'utf-8', mode: 0o600 });
+    printSuccess('.env file written (permissions: 600 — owner only)');
   } catch (err) {
     printError(`Could not write .env: ${err.message}`);
     return;
   }
 
-  // ── Summary ─────────────────────────────────────────────────────────────────────
   console.log('\n' + chalk.bold('  Setup complete!\n'));
   printInfo(`Default provider: ${chalk.cyan(defaultProvider)}`);
   if (defaultProvider === 'ollama') {
@@ -172,7 +174,7 @@ export async function initCommand() {
     console.log(`  ${chalk.dim('Pull your model:')}              ${chalk.cyan(`ollama pull ${ollamaModel || 'mistral'}`)}`);
   }
   printInfo(`Default skill:    ${chalk.cyan(defaultSkill)}`);
-  printInfo(`Memory stored at: ${chalk.dim('~/.teampulse/memory.json')}`);
+  printInfo(`Memory stored at: ${chalk.dim('~/.teampulse/memory.json')} ${chalk.dim('(mode 600)')}`);
   console.log('\n  ' + chalk.dim('Next steps:'));
   console.log('  ' + chalk.cyan('teampulse analyze <your-transcript.txt>'));
   console.log('  ' + chalk.cyan('teampulse history') + '\n');

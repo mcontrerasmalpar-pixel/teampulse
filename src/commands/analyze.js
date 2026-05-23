@@ -1,21 +1,29 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, statSync } from 'fs';
 import { resolve, basename } from 'path';
 import chalk from 'chalk';
 import { callProvider, resolveProvider, getProviderLabel } from '../services/provider.js';
 import { saveMeeting, generateMeetingId, initDB } from '../utils/memory.js';
 import {
   printSection, printDecision, printTask, printRisk,
-  printSuccess, printError, printInfo,
+  printSuccess, printError, printInfo, printWarn,
   printProviderTag, printTiming, printProviderError, createSpinner
 } from '../utils/ui.js';
 
+// 4 MB cap — prevents accidental huge API calls and runaway costs
+const MAX_TRANSCRIPT_BYTES = 4 * 1024 * 1024;
+
 // ── analyzeFile: shared helper used by batch + watch ─────────────────────────
 export async function analyzeFile(filePath, opts = {}) {
-  const { provider = 'gemini', model: modelOverride, skill = 'product-manager', filter, silent = false } = opts;
+  const { provider = 'gemini', model: modelOverride, skill = 'product-manager' } = opts;
   const { name: provName, model } = resolveProvider(provider, modelOverride);
 
   const fullPath = resolve(filePath);
   if (!existsSync(fullPath)) throw new Error(`File not found: ${fullPath}`);
+
+  const stat = statSync(fullPath);
+  if (stat.size > MAX_TRANSCRIPT_BYTES) throw new Error(
+    `Transcript too large (${(stat.size / 1024 / 1024).toFixed(1)} MB). Max allowed: 4 MB.`
+  );
 
   const transcript = readFileSync(fullPath, 'utf-8');
   if (transcript.length < 50) throw new Error('Transcript too short.');
@@ -36,14 +44,13 @@ export async function analyzeFile(filePath, opts = {}) {
 
   const filename = basename(filePath);
   const meetingId = generateMeetingId(filename);
-  const meetingRecord = {
+  await saveMeeting({
     id: meetingId, filename, skill,
     provider: provName, model,
     analyzedAt: new Date().toISOString(),
     title: analysis.title || filename,
     analysis
-  };
-  await saveMeeting(meetingRecord);
+  });
   return { meetingId, ...analysis };
 }
 
@@ -56,6 +63,19 @@ export async function analyzeCommand(filePath, options) {
   if (!existsSync(fullPath)) {
     printError(`File not found: ${fullPath}`);
     printInfo('Tip: Export your Google Meet transcript from Google Drive as a .txt or .md file');
+    process.exit(1);
+  }
+
+  // Size guard before reading into memory
+  try {
+    const stat = statSync(fullPath);
+    if (stat.size > MAX_TRANSCRIPT_BYTES) {
+      printError(`Transcript too large (${(stat.size / 1024 / 1024).toFixed(1)} MB). Max allowed: 4 MB.`);
+      printWarn('Split the file into smaller chunks and analyze each one separately.');
+      process.exit(1);
+    }
+  } catch (err) {
+    printError(`Cannot stat file: ${err.message}`);
     process.exit(1);
   }
 
@@ -76,12 +96,9 @@ export async function analyzeCommand(filePath, options) {
   const filename = basename(filePath);
 
   printProviderTag(provName, model);
-
-  const spinner = createSpinner(
-    `Analyzing ${chalk.cyan(filename)} · skill: ${chalk.cyan(skill)}…`
-  );
-
+  const spinner = createSpinner(`Analyzing ${chalk.cyan(filename)} · skill: ${chalk.cyan(skill)}…`);
   const startMs = Date.now();
+
   let analysis;
   try {
     const prompt = buildAnalysisPrompt(transcript, skill);
@@ -103,14 +120,13 @@ export async function analyzeCommand(filePath, options) {
   }
 
   const meetingId = generateMeetingId(filename);
-  const meetingRecord = {
+  await saveMeeting({
     id: meetingId, filename, skill,
     provider: provName, model,
     analyzedAt: new Date().toISOString(),
     title: analysis.title || filename,
     analysis
-  };
-  await saveMeeting(meetingRecord);
+  });
   printInfo(`Saved as meeting ID: ${meetingId}`);
 
   if (format === 'json') {
@@ -127,7 +143,6 @@ export async function analyzeCommand(filePath, options) {
     return;
   }
 
-  // ── Plain ───────────────────────────────────────────────────────────────────────
   console.log();
   console.log(chalk.bold.white(`  ${analysis.title || filename}`));
   console.log(chalk.dim(`  ${new Date().toLocaleDateString()}  ·  skill: ${skill}  ·  id: ${meetingId}  ·  ${getProviderLabel(provName, model)}`));
@@ -170,7 +185,6 @@ export async function analyzeCommand(filePath, options) {
   }
 }
 
-// ── Shared prompt builder ───────────────────────────────────────────────────────────
 function buildAnalysisPrompt(transcript, skill = 'product-manager') {
   const skillContext = SKILL_PROMPTS[skill] || SKILL_PROMPTS['product-manager'];
   return `${skillContext}

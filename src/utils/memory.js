@@ -1,10 +1,10 @@
 import { join } from 'path';
 import { homedir } from 'os';
-import { mkdirSync, existsSync } from 'fs';
+import { mkdirSync, existsSync, chmodSync } from 'fs';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 
-const DB_DIR = join(homedir(), '.teampulse');
+const DB_DIR  = join(homedir(), '.teampulse');
 const DB_PATH = join(DB_DIR, 'memory.json');
 
 let db = null;
@@ -13,7 +13,11 @@ export async function initDB() {
   if (db) return db;
 
   if (!existsSync(DB_DIR)) {
-    mkdirSync(DB_DIR, { recursive: true });
+    // 0o700 — only the current user can read/write/enter this directory
+    mkdirSync(DB_DIR, { recursive: true, mode: 0o700 });
+  } else {
+    // Enforce permissions even if the directory already existed
+    try { chmodSync(DB_DIR, 0o700); } catch {}
   }
 
   const adapter = new JSONFile(DB_PATH);
@@ -21,12 +25,15 @@ export async function initDB() {
   try {
     await db.read();
   } catch {
-    // Corrupted JSON — reset to empty state
     db.data = { meetings: [] };
   }
   db.data ||= { meetings: [] };
   if (!Array.isArray(db.data.meetings)) db.data.meetings = [];
   await db.write();
+
+  // 0o600 — only the current user can read/write memory.json
+  try { chmodSync(DB_PATH, 0o600); } catch {}
+
   return db;
 }
 
@@ -45,6 +52,7 @@ export async function saveMeeting(record) {
     database.data.meetings.push(record);
   }
   await database.write();
+  try { chmodSync(DB_PATH, 0o600); } catch {}
 }
 
 export async function getMeetings(limit = 20) {

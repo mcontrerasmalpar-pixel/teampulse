@@ -22,9 +22,14 @@ export async function watchCommand(dir, options) {
     if (!filename || extname(filename) !== '.txt') return;
     if (processing.has(filename)) return;
 
+    // ── Path traversal guard ───────────────────────────────────────────────────────
     const filePath = resolve(fullDir, filename);
-    processing.add(filename);
+    if (!filePath.startsWith(fullDir + '/') && filePath !== fullDir) {
+      printWarn(`Blocked suspicious path: ${filename}`);
+      return;
+    }
 
+    processing.add(filename);
     await new Promise(r => setTimeout(r, 500));
 
     console.log(`\n  ${chalk.cyan('▶')} Detected: ${chalk.white(filename)}`);
