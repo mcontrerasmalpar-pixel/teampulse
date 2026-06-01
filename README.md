@@ -190,6 +190,32 @@ Interactive setup wizard — configure API keys, default provider, and skill.
 teampulse init
 ```
 
+## How it works
+
+Every `teampulse analyze` run passes through the same pipeline:
+
+```mermaid
+flowchart TD
+    A([transcript .txt]) --> B{size &amp; length\nvalidation}
+    B -- too large / too short --> ERR1([exit with error])
+    B -- ok --> C{SHA-256 hash\ncheck}
+    C -- duplicate found --> CACHE([return cached result\nno API call])
+    C -- new transcript --> D[build prompt\nskill context]
+    D --> E[call AI provider\nGemini · Claude · OpenAI\nMistral · Ollama]
+    E -- transient error\ntimeout · 429 · 503 --> RETRY{retry?\nattempt ≤ 3}
+    RETRY -- yes → backoff 1s/2s/4s --> E
+    RETRY -- no --> ERR2([exit with provider error])
+    E -- raw text --> F[parse JSON\nmulti-pass strategy]
+    F -- invalid JSON --> ERR3([exit with parse error])
+    F -- ok --> G[save to\n~/.teampulse/memory.json]
+    G --> H{output format}
+    H -- plain --> OUT1([colored terminal])
+    H -- json --> OUT2([structured JSON])
+    H -- markdown --> OUT3([Obsidian-compatible .md])
+```
+
+The same core pipeline powers `batch` (runs it per file), `watch` (runs it on new files), `drift` (runs it on two stored meetings), and `watchdog` (aggregates stored analyses — no new transcript needed).
+
 ## Skills
 
 The `--skill` flag tunes the analysis lens:
@@ -235,6 +261,72 @@ Analyzing the same file twice skips the API call and returns the cached result. 
 ### Robust JSON parsing
 
 Provider responses are parsed with a multi-pass strategy: direct parse → strip markdown code fences → extract outermost JSON object → extract outermost JSON array. This handles models that wrap their JSON in ` ```json ``` ` blocks or append trailing prose, without silently failing.
+
+## Error handling
+
+| Situation | What happens |
+|-----------|-------------|
+| File not found | Exits immediately with the full path and a tip to check the export |
+| Transcript under 50 characters | Exits with "too short" — prevents wasting API quota on empty files |
+| Transcript over 4 MB | Exits before reading into memory — suggests splitting the file |
+| Missing API key | Exits with the exact env var name and a link to get the key |
+| Rate limit / 429 | Retries up to 3× with backoff; reports attempt count on final failure |
+| Timeout / network reset | Same retry logic as rate limits |
+| Model not found (Ollama) | Exits with the exact `ollama pull <model>` command to run |
+| Provider returns malformed JSON | Multi-pass parser strips fences and extracts the JSON object; only fails if truly unrecoverable |
+| Corrupted local database | Resets `memory.json` to an empty state and continues — no crash |
+| Transcript already analyzed | Returns cached result silently; no duplicate record created |
+| `--since` date is invalid | Exits early with a format hint (`YYYY-MM-DD`) before reading any files |
+
+**Tip for low-quality transcripts:** Auto-generated transcripts from noisy calls often produce garbled speaker labels and run-on sentences. TeamPulse still extracts what it can, but results improve significantly when the transcript is cleaned up first (remove filler lines, fix speaker tags). The `--skill developer` lens tends to be more tolerant of messy text than `product-manager`.
+
+## Scalability
+
+TeamPulse stores all analysis in a local JSON file (`~/.teampulse/memory.json`). The `--format json` and `--output` flags on both `analyze` and `batch` make it straightforward to pipe results into external systems.
+
+### Webhook integration
+
+Post analysis results to any HTTP endpoint after a run:
+
+```bash
+teampulse analyze meeting.txt --format json --output /tmp/result.json
+curl -X POST https://hooks.slack.com/services/YOUR/WEBHOOK/URL \
+  -H 'Content-Type: application/json' \
+  -d "{\"text\": \"New meeting analyzed: $(jq -r .title /tmp/result.json)\"}"
+```
+
+### Connecting to a CRM
+
+Export tasks with owners and deadlines as JSON, then map them to your CRM's API:
+
+```bash
+teampulse analyze meeting.txt --format json | jq '.tasks[] | select(.owner != null)' \
+  | xargs -I{} curl -X POST https://your-crm.com/api/tasks -d {}
+```
+
+### Slack notification after batch
+
+```bash
+teampulse batch ./meetings/ --output /tmp/batch.json --format json && \
+node -e "
+  const r = JSON.parse(require('fs').readFileSync('/tmp/batch.json'));
+  const msg = \`Batch complete: \${r.passed} meetings · \${r.tasks.length} tasks · \${r.risks.length} risks\`;
+  fetch('https://hooks.slack.com/services/YOUR/WEBHOOK/URL', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ text: msg })
+  });
+"
+```
+
+### Roadmap integrations
+
+| Target | How |
+|--------|-----|
+| Slack | Post analysis summary via Incoming Webhooks after each `analyze` or `batch` run |
+| Notion | Push decisions and tasks to a Notion database via the Notion API using `--format json` output |
+| HubSpot / Salesforce | Map task owners to CRM contacts; create follow-up activities via REST API |
+| Linear / Jira | Create issues from `tasks[]` with priority and owner mapped to assignee |
+| Google Calendar | Schedule follow-ups when `followUpSuggested: true` using the Calendar API |
 
 ## Requirements
 
