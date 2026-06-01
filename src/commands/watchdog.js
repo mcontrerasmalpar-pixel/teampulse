@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { getAllMeetings, initDB } from '../utils/memory.js';
-import { callProvider, resolveProvider, getProviderLabel } from '../services/provider.js';
+import { callProvider, resolveProvider, getProviderLabel, parseJSON } from '../services/provider.js';
 import {
   printError, printInfo, printSection, printWarn,
   printProviderTag, printTiming, printProviderError, createSpinner
@@ -64,8 +64,9 @@ export async function watchdogCommand(options) {
   await initDB();
   const { name: provName, model } = resolveProvider(options.provider || 'gemini', options.model);
 
+  const limit = options.limit ? Math.max(1, parseInt(options.limit, 10)) : 20;
   const allMeetings = await getAllMeetings();
-  const meetings = allMeetings.slice(0, 20);
+  const meetings = allMeetings.slice(0, limit);
 
   if (meetings.length === 0) {
     printWarn('No meetings in memory yet.');
@@ -78,7 +79,7 @@ export async function watchdogCommand(options) {
   console.log('\n' + chalk.bold.cyan('  Watchdog — Recurring Risk Monitor') + '\n');
   printProviderTag(provName, model);
   const total = allMeetings.length;
-  const capped = total > 20 ? chalk.dim(` (showing 20 most recent of ${total})`) : '';
+  const capped = total > limit ? chalk.dim(` (showing ${limit} most recent of ${total})`) : '';
   printInfo(`Scanning ${meetings.length} meeting(s)${capped}${teamFilter ? ` for team: ${chalk.cyan(teamFilter)}` : ''}...`);
 
   const filtered = teamFilter
@@ -99,13 +100,7 @@ export async function watchdogCommand(options) {
   let report;
   try {
     const raw = await callProvider(provName, model, buildWatchdogPrompt(summaries), { jsonMode: true, maxTokens: 4096 });
-    try {
-      report = JSON.parse(raw);
-    } catch {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) report = JSON.parse(match[0]);
-      else throw new Error('Invalid JSON returned for watchdog scan.');
-    }
+    report = parseJSON(raw, provName);
     spinner.succeed(chalk.green(`Watchdog scan complete · ${getProviderLabel(provName, model)}`));
     printTiming(startMs);
   } catch (err) {

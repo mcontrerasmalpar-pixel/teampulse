@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from 'fs';
+import { readdirSync, statSync, writeFileSync } from 'fs';
 import { resolve, basename, extname } from 'path';
 import chalk from 'chalk';
 import { analyzeFile } from './analyze.js';
@@ -9,7 +9,7 @@ import {
 } from '../utils/ui.js';
 
 export async function batchCommand(dir, options) {
-  const { provider = 'gemini', model: modelOverride, skill = 'product-manager', since, filter, title } = options;
+  const { provider = 'gemini', model: modelOverride, skill = 'product-manager', since, filter, title, output, format = 'plain' } = options;
   const { name: provName, model } = resolveProvider(provider, modelOverride);
   const provLabel = getProviderLabel(provName, model);
 
@@ -123,6 +123,37 @@ export async function batchCommand(dir, options) {
 
   if (results.length > 0)
     printInfo(`Run ${chalk.cyan('teampulse chat')} to explore all analyzed meetings interactively.`);
+
+  // ── --output: save consolidated results to file ───────────────────────────────
+  if (output && results.length > 0) {
+    const payload = { total: results.length, passed, failed, decisions: allDecisions, tasks: allTasks, risks: allRisks };
+    if (format === 'json') {
+      writeFileSync(output, JSON.stringify(payload, null, 2));
+      printSuccess(`Batch JSON saved to ${output}`);
+    } else {
+      const lines = [
+        `# Batch Analysis — ${title || dir}`,
+        `\nAnalyzed: ${passed}/${results.length} files  |  ${new Date().toISOString()}\n`,
+      ];
+      if (allDecisions.length) {
+        lines.push('## Decisions\n');
+        allDecisions.forEach(d => lines.push(`- **${d.title}** [${d._file}] — ${d.owner || '⚠ unassigned'} · ${d.status || '—'}`));
+        lines.push('');
+      }
+      if (allTasks.length) {
+        lines.push('## Tasks\n');
+        allTasks.forEach(t => lines.push(`- [${t.done ? 'x' : ' '}] ${t.description} [${t._file}] — ${t.owner || '⚠ unassigned'} [${t.priority}]`));
+        lines.push('');
+      }
+      if (allRisks.length) {
+        lines.push('## Risks\n');
+        allRisks.forEach(r => lines.push(`- [${r.level?.toUpperCase()}] ${r.description} [${r._file}]`));
+        lines.push('');
+      }
+      writeFileSync(output, lines.join('\n'));
+      printSuccess(`Batch markdown saved to ${output}`);
+    }
+  }
 
   console.log();
 }

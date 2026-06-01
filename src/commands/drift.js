@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { getMeetingById, getMeetings, initDB } from '../utils/memory.js';
-import { callProvider, resolveProvider, getProviderLabel } from '../services/provider.js';
+import { callProvider, resolveProvider, getProviderLabel, parseJSON } from '../services/provider.js';
 import {
   printError, printInfo, printSection, printWarn,
   printProviderTag, printTiming, printProviderError, createSpinner
@@ -94,13 +94,7 @@ export async function driftCommand(idA, idB, options) {
   let drift;
   try {
     const raw = await callProvider(provName, model, buildDriftPrompt(meetingA, meetingB), { jsonMode: true });
-    try {
-      drift = JSON.parse(raw);
-    } catch {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) drift = JSON.parse(match[0]);
-      else throw new Error('Invalid JSON returned for drift comparison.');
-    }
+    drift = parseJSON(raw, provName);
     spinner.succeed(chalk.green(`Drift analysis complete · ${getProviderLabel(provName, model)}`));
     printTiming(startMs);
   } catch (err) {

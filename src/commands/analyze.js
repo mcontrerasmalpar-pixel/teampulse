@@ -1,8 +1,9 @@
 import { readFileSync, writeFileSync, existsSync, statSync } from 'fs';
 import { resolve, basename } from 'path';
 import chalk from 'chalk';
-import { callProvider, resolveProvider, getProviderLabel } from '../services/provider.js';
-import { saveMeeting, generateMeetingId, initDB } from '../utils/memory.js';
+import { callProvider, resolveProvider, getProviderLabel, parseJSON } from '../services/provider.js';
+import { SKILL_PROMPTS } from '../config/skills.js';
+import { saveMeeting, generateMeetingId, initDB, hashTranscript, findMeetingByHash } from '../utils/memory.js';
 import {
   printSection, printDecision, printTask, printRisk,
   printSuccess, printError, printInfo, printWarn,
@@ -30,17 +31,14 @@ export async function analyzeFile(filePath, opts = {}) {
 
   await initDB();
 
+  // Skip API call if we've already analyzed this exact transcript content
+  const txHash = hashTranscript(transcript);
+  const duplicate = await findMeetingByHash(txHash);
+  if (duplicate) return { meetingId: duplicate.id, _cached: true, ...duplicate.analysis };
+
   const prompt = buildAnalysisPrompt(transcript, skill);
   const raw = await callProvider(provName, model, prompt, { jsonMode: true });
-
-  let analysis;
-  try {
-    analysis = JSON.parse(raw);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (match) analysis = JSON.parse(match[0]);
-    else throw new Error(`${provName} returned invalid JSON. Check your API key and transcript format.`);
-  }
+  const analysis = parseJSON(raw, provName);
 
   const filename = basename(filePath);
   const meetingId = generateMeetingId(filename);
@@ -49,6 +47,7 @@ export async function analyzeFile(filePath, opts = {}) {
     provider: provName, model,
     analyzedAt: new Date().toISOString(),
     title: analysis.title || filename,
+    transcriptHash: txHash,
     analysis
   });
   return { meetingId, ...analysis };
@@ -95,39 +94,43 @@ export async function analyzeCommand(filePath, options) {
   await initDB();
   const filename = basename(filePath);
 
-  printProviderTag(provName, model);
-  const spinner = createSpinner(`Analyzing ${chalk.cyan(filename)} · skill: ${chalk.cyan(skill)}…`);
-  const startMs = Date.now();
+  const txHash = hashTranscript(transcript);
+  const duplicate = await findMeetingByHash(txHash);
 
   let analysis;
-  try {
-    const prompt = buildAnalysisPrompt(transcript, skill);
-    const raw = await callProvider(provName, model, prompt, { jsonMode: true });
-    try {
-      analysis = JSON.parse(raw);
-    } catch {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) analysis = JSON.parse(match[0]);
-      else throw new Error(`${provName} returned invalid JSON. Check your API key and transcript format.`);
-    }
-    spinner.succeed(chalk.green(`Analysis complete · ${getProviderLabel(provName, model)}`));
-    printTiming(startMs);
-  } catch (err) {
-    spinner.fail(chalk.red('Analysis failed'));
-    printProviderError(provName);
-    printError(err.message);
-    process.exit(1);
-  }
+  let meetingId;
 
-  const meetingId = generateMeetingId(filename);
-  await saveMeeting({
-    id: meetingId, filename, skill,
-    provider: provName, model,
-    analyzedAt: new Date().toISOString(),
-    title: analysis.title || filename,
-    analysis
-  });
-  printInfo(`Saved as meeting ID: ${meetingId}`);
+  if (duplicate) {
+    printInfo(`Already analyzed — returning cached result (id: ${duplicate.id})`);
+    analysis = duplicate.analysis;
+    meetingId = duplicate.id;
+  } else {
+    printProviderTag(provName, model);
+    const spinner = createSpinner(`Analyzing ${chalk.cyan(filename)} · skill: ${chalk.cyan(skill)}…`);
+    const startMs = Date.now();
+    try {
+      const prompt = buildAnalysisPrompt(transcript, skill);
+      const raw = await callProvider(provName, model, prompt, { jsonMode: true });
+      analysis = parseJSON(raw, provName);
+      spinner.succeed(chalk.green(`Analysis complete · ${getProviderLabel(provName, model)}`));
+      printTiming(startMs);
+    } catch (err) {
+      spinner.fail(chalk.red('Analysis failed'));
+      printProviderError(provName);
+      printError(err.message);
+      process.exit(1);
+    }
+    meetingId = generateMeetingId(filename);
+    await saveMeeting({
+      id: meetingId, filename, skill,
+      provider: provName, model,
+      analyzedAt: new Date().toISOString(),
+      title: analysis.title || filename,
+      transcriptHash: txHash,
+      analysis
+    });
+    printInfo(`Saved as meeting ID: ${meetingId}`);
+  }
 
   if (format === 'json') {
     const jsonOut = JSON.stringify({ meetingId, ...analysis }, null, 2);
@@ -321,9 +324,3 @@ function toMarkdown(id, a, skill) {
   return lines.join('\n');
 }
 
-const SKILL_PROMPTS = {
-  'product-manager': 'You are analyzing this meeting as a product manager. Prioritize: feature decisions, user impact, roadmap implications, delivery risks, and ownership clarity.',
-  'developer':       'You are analyzing this meeting as a senior engineer. Prioritize: technical decisions, architecture implications, blockers, technical debt, and realistic deadlines.',
-  'founder':         'You are analyzing this meeting as a founder/CEO. Prioritize: strategic decisions, resource allocation, team alignment, market risks, and high-level outcomes.',
-  'marketing':       'You are analyzing this meeting as a marketing lead. Prioritize: campaign decisions, messaging, launch timelines, audience insights, and cross-team dependencies.'
-};
