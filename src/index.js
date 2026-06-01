@@ -50,6 +50,8 @@ program
   .option('-p, --provider <name>', 'AI provider: gemini | claude | openai | mistral | ollama', 'gemini')
   .option('-m, --model <name>',    'Override model name')
   .option('-s, --skill <skill>',   'Role skill: product-manager | developer | founder | marketing', 'product-manager')
+  .option('-f, --format <format>', 'Output format for --output: plain | json', 'plain')
+  .option('-o, --output <file>',   'Save consolidated results to file')
   .option('--since <date>',        'Only files modified after this date (YYYY-MM-DD)')
   .option('--filter <type>',       'Show only: decision | task | risk')
   .option('--title <label>',       'Label this batch run')
@@ -89,6 +91,7 @@ program
   .option('-p, --provider <name>', 'AI provider: gemini | claude | openai | mistral | ollama', 'gemini')
   .option('-m, --model <name>',    'Override model name')
   .option('-t, --team <name>',     'Filter by team name or keyword')
+  .option('-l, --limit <n>',       'Max meetings to scan (default: 20)', '20')
   .action(watchdogCommand);
 
 // ── init ──────────────────────────────────────────────────────────────────────

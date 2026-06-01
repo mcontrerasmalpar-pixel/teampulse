@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { homedir } from 'os';
 import { mkdirSync, existsSync, chmodSync } from 'fs';
+import { createHash } from 'crypto';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 
@@ -41,6 +42,17 @@ export function generateMeetingId(filename) {
   const base = filename.replace(/\.[^.]+$/, '').replace(/[^a-z0-9]/gi, '-').toLowerCase();
   const ts = Date.now().toString(36);
   return `${base}-${ts}`.slice(0, 32);
+}
+
+// Returns a short hex digest of the transcript content for deduplication.
+export function hashTranscript(transcript) {
+  return createHash('sha256').update(transcript).digest('hex').slice(0, 16);
+}
+
+// Returns the stored meeting whose transcriptHash matches, or null.
+export async function findMeetingByHash(hash) {
+  const database = await initDB();
+  return database.data.meetings.find(m => m.transcriptHash === hash) || null;
 }
 
 export async function saveMeeting(record) {
