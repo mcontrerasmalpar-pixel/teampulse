@@ -87,6 +87,8 @@ teampulse batch <dir> [options]
   -p, --provider <name>   AI provider
   -m, --model <name>      override model name
   -s, --skill <skill>     role skill
+  -f, --format <format>   output format for --output: plain | json  (default: plain)
+  -o, --output <file>     save consolidated results to file
       --since <date>      only files modified after YYYY-MM-DD
       --filter <type>     show only: decision | task | risk
 ```
@@ -94,6 +96,8 @@ teampulse batch <dir> [options]
 ```bash
 teampulse batch ./meetings/ --provider mistral --since 2026-05-01
 teampulse batch ./meetings/ --provider ollama --model llama3 --filter risk
+teampulse batch ./meetings/ --output summary.md
+teampulse batch ./meetings/ --output summary.json --format json
 ```
 
 ### `watch`
@@ -132,7 +136,7 @@ teampulse drift abc123 def456 --provider mistral
 
 ### `watchdog`
 
-Scan all stored meetings for systemic issues: recurring risks, ownerless tasks, and overloaded team members.
+Scan stored meetings for systemic issues: recurring risks, ownerless tasks, and overloaded team members.
 
 ```bash
 teampulse watchdog [options]
@@ -140,11 +144,13 @@ teampulse watchdog [options]
   -p, --provider <name>   AI provider
   -m, --model <name>      override model name
   -t, --team <name>       filter by team name or keyword
+  -l, --limit <n>         max meetings to scan  (default: 20)
 ```
 
 ```bash
 teampulse watchdog --provider gemini
 teampulse watchdog --provider ollama --team growth
+teampulse watchdog --limit 50 --provider mistral
 ```
 
 ### `chat`
@@ -215,6 +221,20 @@ ollama pull phi3          # lightweight
 # Use a custom host
 OLLAMA_HOST=http://192.168.1.10:11434 teampulse analyze meeting.txt --provider ollama
 ```
+
+## Reliability
+
+### Automatic retry
+
+All provider calls retry up to 3 times with exponential backoff (1 s → 2 s → 4 s) on transient errors: timeouts, rate limits (429), service unavailability (503), and network resets. Permanent errors (wrong API key, unknown model) fail immediately without retrying.
+
+### Transcript deduplication
+
+Analyzing the same file twice skips the API call and returns the cached result. TeamPulse hashes the transcript content (SHA-256) at read time and checks it against local memory before sending any request. Re-runs are instant and free.
+
+### Robust JSON parsing
+
+Provider responses are parsed with a multi-pass strategy: direct parse → strip markdown code fences → extract outermost JSON object → extract outermost JSON array. This handles models that wrap their JSON in ` ```json ``` ` blocks or append trailing prose, without silently failing.
 
 ## Requirements
 
