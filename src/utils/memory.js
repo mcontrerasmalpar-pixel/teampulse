@@ -1,98 +1,359 @@
-import { join } from 'path';
-import { homedir } from 'os';
-import { mkdirSync, existsSync, chmodSync } from 'fs';
-import { createHash } from 'crypto';
-import { Low } from 'lowdb';
-import { JSONFile } from 'lowdb/node';
+/**
+ * TeamPulse Memory Utility
+ * Handles persistent storage with atomic writes and schema versioning
+ */
 
-const DB_DIR  = join(homedir(), '.teampulse');
-const DB_PATH = join(DB_DIR, 'memory.json');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-let db = null;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function initDB() {
-  if (db) return db;
+/**
+ * Get the TeamPulse config directory
+ */
+function getConfigDir() {
+  const homeDir = process.env.HOME || process.env.USERPROFILE || process.env.HOMEPATH;
+  return path.join(homeDir, '.teampulse');
+}
 
-  if (!existsSync(DB_DIR)) {
-    // 0o700 — only the current user can read/write/enter this directory
-    mkdirSync(DB_DIR, { recursive: true, mode: 0o700 });
-  } else {
-    // Enforce permissions even if the directory already existed
-    try { chmodSync(DB_DIR, 0o700); } catch {}
-  }
-
-  const adapter = new JSONFile(DB_PATH);
-  db = new Low(adapter, { meetings: [] });
+/**
+ * Ensure config directory exists with secure permissions
+ */
+async function ensureConfigDir() {
+  const configDir = getConfigDir();
+  
   try {
-    await db.read();
+    await fs.promises.access(configDir, fs.constants.F_OK);
   } catch {
-    db.data = { meetings: [] };
+    await fs.promises.mkdir(configDir, { mode: 0o700, recursive: true });
   }
-  db.data ||= { meetings: [] };
-  if (!Array.isArray(db.data.meetings)) db.data.meetings = [];
-  await db.write();
-
-  // 0o600 — only the current user can read/write memory.json
-  try { chmodSync(DB_PATH, 0o600); } catch {}
-
-  return db;
+  
+  return configDir;
 }
 
-export function generateMeetingId(filename) {
-  const base = filename.replace(/\.[^.]+$/, '').replace(/[^a-z0-9]/gi, '-').toLowerCase();
-  const ts = Date.now().toString(36);
-  return `${base}-${ts}`.slice(0, 32);
+/**
+ * Memory schema version
+ */
+const MEMORY_SCHEMA_VERSION = 1;
+
+/**
+ * Default memory structure
+ */
+function createDefaultMemory() {
+  return {
+    _version: MEMORY_SCHEMA_VERSION,
+    _createdAt: new Date().toISOString(),
+    _updatedAt: new Date().toISOString(),
+    sessions: [],
+    preferences: {
+      defaultProvider: 'gemini',
+      defaultModel: 'gemini-2.0-flash',
+      streamingEnabled: true,
+      maxContextLength: 10,
+    },
+    cache: {},
+    metadata: {},
+  };
 }
 
-// Returns a short hex digest of the transcript content for deduplication.
-export function hashTranscript(transcript) {
-  return createHash('sha256').update(transcript).digest('hex').slice(0, 16);
+/**
+ * Validate memory schema
+ */
+function validateMemorySchema(memory) {
+  if (!memory || typeof memory !== 'object') {
+    return { valid: false, error: 'Memory is not an object' };
+  }
+
+  if (memory._version !== MEMORY_SCHEMA_VERSION) {
+    return { 
+      valid: false, 
+      error: `Schema version mismatch. Expected ${MEMORY_SCHEMA_VERSION}, got ${memory._version || 'undefined'}`,
+      needsMigration: true 
+    };
+  }
+
+  const requiredFields = ['_version', '_createdAt', '_updatedAt', 'sessions', 'preferences'];
+  for (const field of requiredFields) {
+    if (!(field in memory)) {
+      return { valid: false, error: `Missing required field: ${field}` };
+    }
+  }
+
+  return { valid: true };
 }
 
-// Returns the stored meeting whose transcriptHash matches, or null.
-export async function findMeetingByHash(hash) {
-  const database = await initDB();
-  return database.data.meetings.find(m => m.transcriptHash === hash) || null;
+/**
+ * Migrate memory from older schema versions
+ */
+function migrateMemory(memory) {
+  const currentVersion = memory._version || 0;
+  
+  if (currentVersion >= MEMORY_SCHEMA_VERSION) {
+    return memory;
+  }
+
+  console.log(`Migrating memory from version ${currentVersion} to ${MEMORY_SCHEMA_VERSION}`);
+  
+  let migrated = { ...memory };
+
+  if (currentVersion < 1) {
+    migrated = {
+      ...migrated,
+      _version: 1,
+      _createdAt: migrated._createdAt || new Date().toISOString(),
+      _updatedAt: new Date().toISOString(),
+      sessions: migrated.sessions || [],
+      preferences: {
+        defaultProvider: 'gemini',
+        defaultModel: 'gemini-2.0-flash',
+        streamingEnabled: true,
+        maxContextLength: 10,
+        ...migrated.preferences,
+      },
+      cache: migrated.cache || {},
+      metadata: migrated.metadata || {},
+    };
+  }
+
+  return migrated;
 }
 
-export async function saveMeeting(record) {
-  const database = await initDB();
-  const existing = database.data.meetings.findIndex(m => m.id === record.id);
-  if (existing >= 0) {
-    database.data.meetings[existing] = record;
+/**
+ * Load memory from disk with validation
+ */
+export async function loadMemory() {
+  try {
+    const configDir = await ensureConfigDir();
+    const memoryPath = path.join(configDir, 'memory.json');
+    
+    try {
+      await fs.promises.access(memoryPath, fs.constants.F_OK);
+    } catch {
+      console.log('Creating new memory file');
+      return createDefaultMemory();
+    }
+
+    const content = await fs.promises.readFile(memoryPath, 'utf-8');
+    const memory = JSON.parse(content);
+
+    const validation = validateMemorySchema(memory);
+    
+    if (!validation.valid) {
+      if (validation.needsMigration) {
+        console.warn('Memory schema needs migration');
+        const migrated = migrateMemory(memory);
+        const updatedValidation = validateMemorySchema(migrated);
+        if (!updatedValidation.valid) {
+          console.error('Migration failed, using default memory');
+          return createDefaultMemory();
+        }
+        return migrated;
+      } else {
+        console.error('Invalid memory schema:', validation.error);
+        return createDefaultMemory();
+      }
+    }
+
+    return memory;
+  } catch (error) {
+    console.error('Error loading memory:', error.message);
+    return createDefaultMemory();
+  }
+}
+
+/**
+ * Save memory to disk with atomic write
+ */
+export async function saveMemory(memory) {
+  try {
+    const configDir = await ensureConfigDir();
+    const memoryPath = path.join(configDir, 'memory.json');
+    const tempPath = path.join(configDir, 'memory.json.tmp');
+
+    memory._updatedAt = new Date().toISOString();
+    memory._version = MEMORY_SCHEMA_VERSION;
+
+    const validation = validateMemorySchema(memory);
+    if (!validation.valid) {
+      throw new Error(`Invalid memory schema: ${validation.error}`);
+    }
+
+    const content = JSON.stringify(memory, null, 2);
+    await fs.promises.writeFile(tempPath, content, { 
+      encoding: 'utf-8',
+      mode: 0o600,
+    });
+
+    await fs.promises.rename(tempPath, memoryPath);
+
+    try {
+      await fs.promises.chmod(memoryPath, 0o600);
+    } catch (chmodError) {
+      if (process.platform !== 'win32') {
+        console.warn('Warning: Could not set file permissions:', chmodError.message);
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error saving memory:', error.message);
+    
+    try {
+      const configDir = await ensureConfigDir();
+      const tempPath = path.join(configDir, 'memory.json.tmp');
+      await fs.promises.unlink(tempPath);
+    } catch {
+      // Ignore cleanup errors
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Update memory with partial changes
+ */
+export async function updateMemory(updates) {
+  const memory = await loadMemory();
+  
+  const updated = {
+    ...memory,
+    ...updates,
+    preferences: {
+      ...memory.preferences,
+      ...(updates.preferences || {}),
+    },
+    cache: {
+      ...memory.cache,
+      ...(updates.cache || {}),
+    },
+    metadata: {
+      ...memory.metadata,
+      ...(updates.metadata || {}),
+    },
+  };
+
+  if (updates.sessions) {
+    updated.sessions = [...memory.sessions, ...updates.sessions];
+  }
+
+  await saveMemory(updated);
+  return updated;
+}
+
+/**
+ * Get a specific session by ID
+ */
+export function getSessionById(memory, sessionId) {
+  return memory.sessions.find(s => s.id === sessionId);
+}
+
+/**
+ * Add or update a session
+ */
+export async function addOrUpdateSession(sessionData) {
+  const memory = await loadMemory();
+  
+  const existingIndex = memory.sessions.findIndex(s => s.id === sessionData.id);
+  
+  if (existingIndex >= 0) {
+    memory.sessions[existingIndex] = {
+      ...memory.sessions[existingIndex],
+      ...sessionData,
+      updatedAt: new Date().toISOString(),
+    };
   } else {
-    database.data.meetings.push(record);
+    memory.sessions.push({
+      ...sessionData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
   }
-  await database.write();
-  try { chmodSync(DB_PATH, 0o600); } catch {}
+
+  await saveMemory(memory);
+  return memory;
 }
 
-export async function getMeetings(limit = 20) {
-  const database = await initDB();
-  return [...database.data.meetings]
-    .sort((a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt))
-    .slice(0, limit);
+/**
+ * Clear old sessions (older than maxAge days)
+ */
+export async function clearOldSessions(maxAge = 30) {
+  const memory = await loadMemory();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - maxAge);
+
+  const filteredSessions = memory.sessions.filter(session => {
+    const sessionDate = new Date(session.updatedAt || session.createdAt);
+    return sessionDate > cutoff;
+  });
+
+  if (filteredSessions.length !== memory.sessions.length) {
+    memory.sessions = filteredSessions;
+    await saveMemory(memory);
+    console.log(`Cleared ${memory.sessions.length - filteredSessions.length} old sessions`);
+  }
+
+  return memory;
 }
 
-export async function getMeetingById(id) {
-  const database = await initDB();
-  return database.data.meetings.find(m => m.id === id) || null;
+/**
+ * Get cache entry by key
+ */
+export function getCacheEntry(memory, key) {
+  return memory.cache[key];
 }
 
-export async function getRecentContext(n = 5) {
-  const meetings = await getMeetings(n);
-  return meetings.map(m => ({
-    id: m.id,
-    title: m.title,
-    analyzedAt: m.analyzedAt,
-    skill: m.skill,
-    analysis: m.analysis
-  }));
+/**
+ * Set cache entry with optional TTL
+ */
+export async function setCacheEntry(key, value, ttlMs = null) {
+  const memory = await loadMemory();
+  
+  memory.cache[key] = {
+    value,
+    createdAt: new Date().toISOString(),
+    ttlMs,
+    expiresAt: ttlMs ? new Date(Date.now() + ttlMs).toISOString() : null,
+  };
+
+  await saveMemory(memory);
+  return memory;
 }
 
-export async function getAllMeetings() {
-  const database = await initDB();
-  return [...database.data.meetings].sort(
-    (a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt)
-  );
+/**
+ * Clear expired cache entries
+ */
+export async function clearExpiredCache() {
+  const memory = await loadMemory();
+  const now = new Date();
+
+  const activeCache = {};
+  for (const [key, entry] of Object.entries(memory.cache)) {
+    if (!entry.expiresAt || new Date(entry.expiresAt) > now) {
+      activeCache[key] = entry;
+    }
+  }
+
+  if (Object.keys(activeCache).length !== Object.keys(memory.cache).length) {
+    memory.cache = activeCache;
+    await saveMemory(memory);
+    console.log(`Cleared ${Object.keys(memory.cache).length - Object.keys(activeCache).length} expired cache entries`);
+  }
+
+  return memory;
 }
+
+export default {
+  loadMemory,
+  saveMemory,
+  updateMemory,
+  getSessionById,
+  addOrUpdateSession,
+  clearOldSessions,
+  getCacheEntry,
+  setCacheEntry,
+  clearExpiredCache,
+  MEMORY_SCHEMA_VERSION,
+  createDefaultMemory,
+};
