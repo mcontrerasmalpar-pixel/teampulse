@@ -14,7 +14,7 @@
   },
   "files": [
     "src",
-    "evals/dataset.json",
+    "evals",
     "server.json",
     "README.md",
     "LICENSE"
@@ -27,9 +27,7 @@
     "eval": "node src/index.js eval --provider fixture",
     "mcp-server": "node src/mcp-server.js"
   },
-  "engines": {
-    "node": ">=18"
-  },
+  "engines": { "node": ">=18" },
   "keywords": ["cli", "ai", "meetings", "mcp"],
   "author": "Maria Del Carmen Contreras",
   "license": "MIT",
@@ -38,9 +36,7 @@
     "url": "git+https://github.com/mcontrerasmalpar-pixel/teampulse.git"
   },
   "homepage": "https://github.com/mcontrerasmalpar-pixel/teampulse#readme",
-  "bugs": {
-    "url": "https://github.com/mcontrerasmalpar-pixel/teampulse/issues"
-  },
+  "bugs": { "url": "https://github.com/mcontrerasmalpar-pixel/teampulse/issues" },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "commander": "^12.1.0",

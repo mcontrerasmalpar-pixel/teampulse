@@ -1,16 +1,19 @@
 // @ts-check
 import { readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { analyze } from '../services/provider.js';
 import { scoreCase, aggregateScores } from '../eval/score.js';
+import { buildDataset } from '../../evals/cases.js';
 
-const DEFAULT_DATASET = join(dirname(fileURLToPath(import.meta.url)), '../../evals/dataset.json');
-
-export async function runEval(datasetPath = DEFAULT_DATASET, options = {}) {
-  const provider = options.provider || 'fixture';
+export async function loadDataset(datasetPath) {
+  if (!datasetPath) return buildDataset();
   const raw = await readFile(datasetPath, 'utf-8');
   const dataset = JSON.parse(raw);
+  return { cases: Array.isArray(dataset.cases) ? dataset.cases : dataset };
+}
+
+export async function runEval(datasetPath, options = {}) {
+  const provider = options.provider || 'fixture';
+  const dataset = await loadDataset(datasetPath);
   const cases = Array.isArray(dataset.cases) ? dataset.cases : dataset;
 
   const rows = [];
@@ -20,14 +23,12 @@ export async function runEval(datasetPath = DEFAULT_DATASET, options = {}) {
     rows.push({ id: item.id, scores, predicted });
   }
 
-  const summary = aggregateScores(rows.map((r) => r.scores));
-  return { summary, rows };
+  return { summary: aggregateScores(rows.map((r) => r.scores)), rows };
 }
 
 export async function evalCommand(options = {}) {
-  const dataset = options.dataset || DEFAULT_DATASET;
   const minPrecision = options.minPrecision != null ? Number(options.minPrecision) : 0.7;
-  const result = await runEval(dataset, options);
+  const result = await runEval(options.dataset, options);
 
   console.log(`Eval cases: ${result.summary.cases}`);
   console.log(`Precision (tasks+owners+decisions): ${result.summary.precision.toFixed(3)}`);
@@ -38,9 +39,7 @@ export async function evalCommand(options = {}) {
   if (result.summary.precision < minPrecision) {
     console.error(`Precision ${result.summary.precision.toFixed(3)} < min ${minPrecision}`);
     process.exitCode = 1;
-    return result;
   }
-
   return result;
 }
 
@@ -52,7 +51,7 @@ export function registerEvalCommand(cli) {
   cli
     .command('eval')
     .description('Measure extraction precision against a gold transcript dataset')
-    .option('--dataset <path>', 'Path to eval dataset JSON')
+    .option('--dataset <path>', 'Optional JSON dataset (defaults to bundled gold set)')
     .option('-p, --provider <name>', 'Provider (use fixture in CI)', 'fixture')
     .option('--min-precision <n>', 'Fail below this overall precision', '0.7')
     .action(async (options) => {
