@@ -1,98 +1,124 @@
-import { join } from 'path';
-import { homedir } from 'os';
-import { mkdirSync, existsSync, chmodSync } from 'fs';
-import { createHash } from 'crypto';
-import { Low } from 'lowdb';
-import { JSONFile } from 'lowdb/node';
+// @ts-check
+import { promises as fs } from 'node:fs';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
-const DB_DIR  = join(homedir(), '.teampulse');
-const DB_PATH = join(DB_DIR, 'memory.json');
+const MEMORY_DIR = join(process.env.HOME || process.env.USERPROFILE || '.', '.teampulse');
+const MEMORY_PATH = join(MEMORY_DIR, 'memory.json');
 
-let db = null;
+/**
+ * @typedef {Object} MeetingEntry
+ * @property {string} id
+ * @property {string} file
+ * @property {string} hash
+ * @property {number} timestamp
+ * @property {string} summary
+ */
 
-export async function initDB() {
-  if (db) return db;
+/**
+ * @typedef {Object} MemoryData
+ * @property {number} _version
+ * @property {MeetingEntry[]} meetings
+ */
 
-  if (!existsSync(DB_DIR)) {
-    // 0o700 — only the current user can read/write/enter this directory
-    mkdirSync(DB_DIR, { recursive: true, mode: 0o700 });
-  } else {
-    // Enforce permissions even if the directory already existed
-    try { chmodSync(DB_DIR, 0o700); } catch {}
-  }
+/**
+ * @returns {Promise<MemoryData>}
+ */
+export async function loadMemory() {
+  await ensureDir();
 
-  const adapter = new JSONFile(DB_PATH);
-  db = new Low(adapter, { meetings: [] });
   try {
-    await db.read();
+    const content = await fs.readFile(MEMORY_PATH, 'utf-8');
+    const data = JSON.parse(content);
+
+    if (typeof data._version !== 'number') {
+      data._version = 1;
+    }
+    if (!Array.isArray(data.meetings)) {
+      data.meetings = [];
+    }
+    return data;
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      const fresh = { _version: 1, meetings: [] };
+      await saveMemory(fresh);
+      return fresh;
+    }
+
+    try {
+      const backupPath = `${MEMORY_PATH}.corrupt.${Date.now()}`;
+      await fs.rename(MEMORY_PATH, backupPath);
+    } catch {
+      // si no se puede respaldar, continuar de todos modos
+    }
+
+    const fresh = { _version: 1, meetings: [] };
+    await saveMemory(fresh);
+    return fresh;
+  }
+}
+
+/**
+ * @param {MemoryData} data
+ * @returns {Promise<void>}
+ */
+export async function saveMemory(data) {
+  await ensureDir();
+
+  const tempPath = `${MEMORY_PATH}.tmp.${process.pid}.${Date.now()}`;
+  const payload = JSON.stringify(data, null, 2);
+
+  await fs.writeFile(tempPath, payload, { encoding: 'utf-8', mode: 0o600 });
+  await fs.rename(tempPath, MEMORY_PATH);
+
+  try {
+    await fs.chmod(MEMORY_PATH, 0o600);
   } catch {
-    db.data = { meetings: [] };
+    // en algunos sistemas de archivos esto puede fallar; no es critico
   }
-  db.data ||= { meetings: [] };
-  if (!Array.isArray(db.data.meetings)) db.data.meetings = [];
-  await db.write();
-
-  // 0o600 — only the current user can read/write memory.json
-  try { chmodSync(DB_PATH, 0o600); } catch {}
-
-  return db;
 }
 
-export function generateMeetingId(filename) {
-  const base = filename.replace(/\.[^.]+$/, '').replace(/[^a-z0-9]/gi, '-').toLowerCase();
-  const ts = Date.now().toString(36);
-  return `${base}-${ts}`.slice(0, 32);
-}
-
-// Returns a short hex digest of the transcript content for deduplication.
-export function hashTranscript(transcript) {
-  return createHash('sha256').update(transcript).digest('hex').slice(0, 16);
-}
-
-// Returns the stored meeting whose transcriptHash matches, or null.
-export async function findMeetingByHash(hash) {
-  const database = await initDB();
-  return database.data.meetings.find(m => m.transcriptHash === hash) || null;
-}
-
-export async function saveMeeting(record) {
-  const database = await initDB();
-  const existing = database.data.meetings.findIndex(m => m.id === record.id);
-  if (existing >= 0) {
-    database.data.meetings[existing] = record;
-  } else {
-    database.data.meetings.push(record);
+async function ensureDir() {
+  try {
+    await fs.mkdir(MEMORY_DIR, { recursive: true, mode: 0o700 });
+  } catch {
+    // ya existe
   }
-  await database.write();
-  try { chmodSync(DB_PATH, 0o600); } catch {}
 }
 
-export async function getMeetings(limit = 20) {
-  const database = await initDB();
-  return [...database.data.meetings]
-    .sort((a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt))
-    .slice(0, limit);
+/**
+ * @param {string} file
+ * @param {string} hash
+ * @param {string} summary
+ * @returns {Promise<MeetingEntry>}
+ */
+export async function addMeeting(file, hash, summary) {
+  const memory = await loadMemory();
+  const existing = memory.meetings.find(m => m.hash === hash);
+  if (existing) {
+    return existing;
+  }
+
+  const entry = {
+    id: randomUUID(),
+    file,
+    hash,
+    timestamp: Date.now(),
+    summary,
+  };
+
+  memory.meetings.push(entry);
+  await saveMemory(memory);
+  return entry;
 }
 
-export async function getMeetingById(id) {
-  const database = await initDB();
-  return database.data.meetings.find(m => m.id === id) || null;
+/**
+ * @param {string} hash
+ * @returns {Promise<MeetingEntry | null>}
+ */
+export async function getMeetingByHash(hash) {
+  const memory = await loadMemory();
+  return memory.meetings.find(m => m.hash === hash) || null;
 }
 
-export async function getRecentContext(n = 5) {
-  const meetings = await getMeetings(n);
-  return meetings.map(m => ({
-    id: m.id,
-    title: m.title,
-    analyzedAt: m.analyzedAt,
-    skill: m.skill,
-    analysis: m.analysis
-  }));
-}
-
-export async function getAllMeetings() {
-  const database = await initDB();
-  return [...database.data.meetings].sort(
-    (a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt)
-  );
-}
+export default { loadMemory, saveMemory, addMeeting, getMeetingByHash };
