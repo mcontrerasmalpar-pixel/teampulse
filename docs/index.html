@@ -15,15 +15,15 @@
         }
 
         :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #111111;
-            --bg-tertiary: #1a1a1a;
-            --text-primary: #ffffff;
-            --text-secondary: #a1a1a1;
-            --text-tertiary: #666666;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9f9f9;
+            --bg-tertiary: #f0f0f0;
+            --text-primary: #0a0a0a;
+            --text-secondary: #666666;
+            --text-tertiary: #999999;
             --accent: #3b82f6;
             --accent-hover: #2563eb;
-            --border: #222222;
+            --border: #e5e5e5;
             --gradient-1: #3b82f6;
             --gradient-2: #8b5cf6;
         }
@@ -49,7 +49,7 @@
             left: 0;
             right: 0;
             z-index: 100;
-            background: rgba(10, 10, 10, 0.8);
+            background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border);
         }
@@ -117,7 +117,7 @@
             transform: translateX(-50%);
             width: 600px;
             height: 600px;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
             pointer-events: none;
         }
 
@@ -157,7 +157,7 @@
         }
 
         .btn-secondary {
-            background: var(--bg-tertiary);
+            background: var(--bg-secondary);
             color: var(--text-primary);
             padding: 14px 32px;
             border-radius: 8px;
@@ -170,7 +170,7 @@
         }
 
         .btn-secondary:hover {
-            background: var(--bg-secondary);
+            background: var(--bg-tertiary);
             border-color: var(--text-tertiary);
         }
 
@@ -184,7 +184,7 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
 
         .terminal-header {
@@ -285,6 +285,7 @@
         .feature-card:hover {
             border-color: var(--text-tertiary);
             transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
         }
 
         .feature-icon {
