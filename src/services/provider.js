@@ -1,417 +1,445 @@
-/**
- * TeamPulse AI Provider Service
- * Handles AI API calls with timeout control, error handling, and fallback support
- */
+// @ts-check
 
-import { CONFIG } from '../config/skills.js';
+import { parseJSON } from '../utils/parseJSON.js';
+import { AnalysisSchema } from '../utils/schema.js';
 
 /**
- * Custom error class for AI provider errors
+ * @typedef {Object} AnalysisResult
+ * @property {string} summary
+ * @property {Array<{title: string, description: string, priority: 'high'|'medium'|'low', owner?: string|null, dueDate?: string|null}>} tasks
+ * @property {Array<{title: string, description: string}>} risks
+ * @property {Array<{title: string, description: string}>} decisions
+ * @property {Array<{title: string, description: string}>} action_items
  */
-export class ProviderError extends Error {
-  constructor(message, code, provider, options = {}) {
-    super(message);
-    this.name = 'ProviderError';
-    this.code = code; // 'TIMEOUT', 'AUTH', 'RATE_LIMIT', 'SERVER', 'NETWORK', 'PARSE'
-    this.provider = provider;
-    this.retryAfter = options.retryAfter;
-    this.originalError = options.originalError;
-    this.statusCode = options.statusCode;
-  }
-}
 
 /**
- * Sleep utility for retry delays
+ * @typedef {Object} ProviderConfig
+ * @property {string} name
+ * @property {string} apiKeyEnv
+ * @property {(apiKey: string) => string} buildUrl
+ * @property {(apiKey: string) => Record<string, string>} buildHeaders
+ * @property {(input: string) => object} buildPayload
+ * @property {(data: object) => string} extractText
  */
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 /**
- * Calculate retry delay with exponential backoff
+ * @param {string} input
+ * @param {string} providerName
+ * @param {AbortSignal} [externalSignal]
+ * @param {{fallbackProvider?: string, fallbackModel?: string}} [options]
+ * @returns {Promise<AnalysisResult>}
  */
-function calculateRetryDelay(attempt, baseDelay = 1000, maxDelay = 30000) {
-  const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
-  return delay + Math.random() * 1000; // Add jitter
-}
+export async function analyze(input, providerName = 'gemini', externalSignal, options = {}) {
+  const providers = getProviders();
+  let currentProviderName = providers[providerName] ? providerName : 'gemini';
+  let currentProvider = providers[currentProviderName];
 
-/**
- * Handle HTTP errors with granular error codes
- */
-function handleHttpError(statusCode, provider, responseText) {
-  switch (statusCode) {
-    case 401:
-    case 403:
-      return new ProviderError(
-        `Authentication failed for ${provider}. Check API key.`,
-        'AUTH',
-        provider,
-        { statusCode, originalError: responseText }
-      );
-    
-    case 429:
-      const retryAfterMatch = responseText?.match(/retry-after[\s:=]+(\d+)/i);
-      const retryAfter = retryAfterMatch ? parseInt(retryAfterMatch[1], 10) * 1000 : null;
-      return new ProviderError(
-        `Rate limit exceeded for ${provider}`,
-        'RATE_LIMIT',
-        provider,
-        { statusCode, retryAfter, originalError: responseText }
-      );
-    
-    case 500:
-    case 502:
-    case 503:
-    case 504:
-      return new ProviderError(
-        `Server error from ${provider} (${statusCode})`,
-        'SERVER',
-        provider,
-        { statusCode, originalError: responseText }
-      );
-    
-    case 400:
-      return new ProviderError(
-        `Bad request to ${provider}: ${responseText?.slice(0, 200)}`,
-        'BAD_REQUEST',
-        provider,
-        { statusCode, originalError: responseText }
-      );
-    
-    default:
-      return new ProviderError(
-        `HTTP error ${statusCode} from ${provider}`,
-        'HTTP',
-        provider,
-        { statusCode, originalError: responseText }
-      );
-  }
-}
+  const maxRetries = currentProviderName === 'ollama' ? 0 : 3;
+  const baseDelay = 1000;
 
-/**
- * Call Gemini API with timeout and error handling
- */
-async function callGemini(messages, options = {}) {
-  const { timeout = 30000, signal: externalSignal } = options;
-  const apiKey = process.env.GEMINI_API_KEY;
-  
-  if (!apiKey) {
-    throw new ProviderError('GEMINI_API_KEY not configured', 'AUTH', 'gemini');
-  }
+  let lastError = null;
+  let attempts = 0;
+  let usedFallback = false;
 
-  const timeoutSignal = AbortSignal.timeout(timeout);
-  
-  let signal = timeoutSignal;
-  if (externalSignal) {
-    const controller = new AbortController();
-    externalSignal.addEventListener('abort', () => controller.abort(externalSignal.reason));
-    timeoutSignal.addEventListener('abort', () => controller.abort(timeoutSignal.reason));
-    signal = controller.signal;
-  }
+  while (true) {
+    attempts++;
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{ parts: messages.map(m => ({ text: m.content })) }],
-          generationConfig: {
-            temperature: options.temperature ?? 0.7,
-            maxOutputTokens: options.maxTokens ?? 4096,
-          },
-        }),
-        signal,
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      throw handleHttpError(response.status, 'gemini', errorText);
-    }
-
-    const data = await response.json();
-    
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      throw new ProviderError(
-        'Invalid response format from Gemini',
-        'PARSE',
-        'gemini',
-        { statusCode: response.status, originalError: JSON.stringify(data) }
-      );
-    }
-
-    return {
-      text: data.candidates[0].content.parts[0].text,
-      provider: 'gemini',
-      usage: data.usageMetadata,
-    };
-  } catch (error) {
-    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-      throw new ProviderError(
-        `Request to gemini timed out after ${timeout}ms`,
-        'TIMEOUT',
-        'gemini',
-        { originalError: error }
-      );
-    }
-    if (error instanceof ProviderError) throw error;
-    throw new ProviderError(
-      `Network error calling gemini: ${error.message}`,
-      'NETWORK',
-      'gemini',
-      { originalError: error }
-    );
-  }
-}
-
-/**
- * Call Ollama API with timeout and error handling
- */
-async function callOllama(messages, options = {}) {
-  const { timeout = 30000, signal: externalSignal, model = 'llama3.1' } = options;
-  const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-
-  const timeoutSignal = AbortSignal.timeout(timeout);
-  
-  let signal = timeoutSignal;
-  if (externalSignal) {
-    const controller = new AbortController();
-    externalSignal.addEventListener('abort', () => controller.abort(externalSignal.reason));
-    timeoutSignal.addEventListener('abort', () => controller.abort(timeoutSignal.reason));
-    signal = controller.signal;
-  }
-
-  try {
-    const response = await fetch(`${baseUrl}/api/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        prompt: messages.map(m => m.content).join('\n\n'),
-        stream: false,
-        options: {
-          temperature: options.temperature ?? 0.7,
-          num_predict: options.maxTokens ?? 4096,
-        },
-      }),
-      signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      throw handleHttpError(response.status, 'ollama', errorText);
-    }
-
-    const data = await response.json();
-    
-    return {
-      text: data.response,
-      provider: 'ollama',
-      usage: {
-        prompt_tokens: data.prompt_eval_count || 0,
-        completion_tokens: data.eval_count || 0,
-      },
-    };
-  } catch (error) {
-    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-      throw new ProviderError(
-        `Request to ollama timed out after ${timeout}ms`,
-        'TIMEOUT',
-        'ollama',
-        { originalError: error }
-      );
-    }
-    if (error instanceof ProviderError) throw error;
-    throw new ProviderError(
-      `Network error calling ollama: ${error.message}`,
-      'NETWORK',
-      'ollama',
-      { originalError: error }
-    );
-  }
-}
-
-/**
- * Call Mistral API with timeout and error handling
- */
-async function callMistral(messages, options = {}) {
-  const { timeout = 30000, signal: externalSignal, model = 'mistral-large-latest' } = options;
-  const apiKey = process.env.MISTRAL_API_KEY;
-  
-  if (!apiKey) {
-    throw new ProviderError('MISTRAL_API_KEY not configured', 'AUTH', 'mistral');
-  }
-
-  const timeoutSignal = AbortSignal.timeout(timeout);
-  
-  let signal = timeoutSignal;
-  if (externalSignal) {
-    const controller = new AbortController();
-    externalSignal.addEventListener('abort', () => controller.abort(externalSignal.reason));
-    timeoutSignal.addEventListener('abort', () => controller.abort(timeoutSignal.reason));
-    signal = controller.signal;
-  }
-
-  try {
-    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: messages.map(m => ({ role: m.role || 'user', content: m.content })),
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.maxTokens ?? 4096,
-      }),
-      signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      throw handleHttpError(response.status, 'mistral', errorText);
-    }
-
-    const data = await response.json();
-    
-    if (!data.choices?.[0]?.message?.content) {
-      throw new ProviderError(
-        'Invalid response format from Mistral',
-        'PARSE',
-        'mistral',
-        { statusCode: response.status, originalError: JSON.stringify(data) }
-      );
-    }
-
-    return {
-      text: data.choices[0].message.content,
-      provider: 'mistral',
-      usage: data.usage,
-    };
-  } catch (error) {
-    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-      throw new ProviderError(
-        `Request to mistral timed out after ${timeout}ms`,
-        'TIMEOUT',
-        'mistral',
-        { originalError: error }
-      );
-    }
-    if (error instanceof ProviderError) throw error;
-    throw new ProviderError(
-      `Network error calling mistral: ${error.message}`,
-      'NETWORK',
-      'mistral',
-      { originalError: error }
-    );
-  }
-}
-
-/**
- * Main provider function with fallback support
- */
-export async function callProvider(messages, options = {}) {
-  const {
-    provider = CONFIG.ai.primaryProvider,
-    fallbackProvider = CONFIG.ai.fallbackProvider,
-    maxRetries = CONFIG.ai.maxRetries,
-    timeout = CONFIG.ai.timeout,
-    onFallback,
-    ...providerOptions
-  } = options;
-
-  const providers = [provider];
-  if (fallbackProvider && fallbackProvider !== provider) {
-    providers.push(fallbackProvider);
-  }
-
-  for (let providerIndex = 0; providerIndex < providers.length; providerIndex++) {
-    const currentProvider = providers[providerIndex];
-    let lastError = null;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const apiKey = process.env[currentProvider.apiKeyEnv];
+    if (!apiKey && currentProvider.apiKeyEnv) {
+      lastError = new Error(`Falta variable de entorno: ${currentProvider.apiKeyEnv}`);
+      lastError.isRetryable = false;
+    } else {
       try {
-        if (attempt > 0) {
-          const delay = calculateRetryDelay(attempt - 1);
-          console.log(`Retrying ${currentProvider} in ${Math.round(delay)}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
-          await sleep(delay);
-        }
-
-        let result;
-        switch (currentProvider) {
-          case 'gemini':
-            result = await callGemini(messages, { ...providerOptions, timeout });
-            break;
-          case 'ollama':
-            result = await callOllama(messages, { ...providerOptions, timeout });
-            break;
-          case 'mistral':
-            result = await callMistral(messages, { ...providerOptions, timeout });
-            break;
-          default:
-            throw new ProviderError(`Unknown provider: ${currentProvider}`, 'AUTH', currentProvider);
-        }
-
-        if (providerIndex > 0) {
-          console.log(`✓ Successfully used fallback provider: ${currentProvider}`);
-          if (onFallback) onFallback(currentProvider);
-        }
-
+        const result = await callProviderOnce(currentProvider, apiKey, input, externalSignal);
         return result;
-      } catch (error) {
-        lastError = error;
+      } catch (err) {
+        lastError = err;
+      }
+    }
 
-        if (error.code === 'AUTH') {
-          console.error(`❌ Auth error from ${currentProvider}: ${error.message}`);
-          break;
-        }
+    const isRetryable = classifyHttpError(lastError);
 
-        if (error.code === 'RATE_LIMIT' && providerIndex < providers.length - 1) {
-          console.warn(`⚠ Rate limited by ${currentProvider}, switching to fallback`);
-          break;
-        }
-
-        if (attempt < maxRetries && ['TIMEOUT', 'SERVER', 'NETWORK', 'RATE_LIMIT'].includes(error.code)) {
-          console.warn(`⚠ ${error.code} error from ${currentProvider}: ${error.message}`);
+    if (!isRetryable) {
+      if (!usedFallback && options.fallbackProvider && options.fallbackProvider !== currentProviderName) {
+        const fallback = providers[options.fallbackProvider];
+        if (fallback) {
+          currentProvider = fallback;
+          currentProviderName = options.fallbackProvider;
+          usedFallback = true;
+          attempts = 0;
           continue;
         }
-
-        console.error(`❌ Error from ${currentProvider}: ${error.message}`);
-        break;
       }
+      throw lastError;
     }
 
-    if (providerIndex < providers.length - 1) {
-      console.log(`Switching to fallback provider: ${providers[providerIndex + 1]}`);
-      continue;
+    if (attempts > maxRetries) {
+      if (!usedFallback && options.fallbackProvider && options.fallbackProvider !== currentProviderName) {
+        const fallback = providers[options.fallbackProvider];
+        if (fallback) {
+          currentProvider = fallback;
+          currentProviderName = options.fallbackProvider;
+          usedFallback = true;
+          attempts = 0;
+          continue;
+        }
+      }
+      throw lastError;
     }
+
+    const retryAfterMs = lastError && lastError.retryAfterMs;
+    const backoff = Math.min(baseDelay * Math.pow(2, attempts - 1), 8000);
+    const delay = typeof retryAfterMs === 'number' && retryAfterMs > 0 ? retryAfterMs : backoff;
+
+    await sleep(delay, externalSignal);
   }
-
-  throw lastError || new ProviderError('All providers failed', 'SERVER', provider);
 }
 
 /**
- * Health check for providers
+ * @param {number} ms
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<void>}
  */
-export async function checkProviderHealth(provider = 'gemini') {
-  try {
-    const testMessages = [{ role: 'user', content: 'Hello' }];
-    const result = await callProvider(testMessages, { 
-      provider, 
-      timeout: 5000,
-      maxRetries: 0 
-    });
-    return { healthy: true, provider, latency: result.latency };
-  } catch (error) {
-    return { healthy: false, provider, error: error.message, code: error.code };
-  }
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    if (signal) {
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(makeAbortError());
+      };
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
+  });
 }
 
-export default { callProvider, checkProviderHealth, ProviderError };
+function makeAbortError() {
+  const e = new Error('Operacion cancelada');
+  e.code = 'EABORTED';
+  e.isRetryable = false;
+  return e;
+}
+
+/**
+ * @param {ProviderConfig} provider
+ * @param {string} apiKey
+ * @param {string} input
+ * @param {AbortSignal} [externalSignal]
+ * @returns {Promise<AnalysisResult>}
+ */
+async function callProviderOnce(provider, apiKey, input, externalSignal) {
+  const url = provider.buildUrl(apiKey);
+  const headers = {
+    'Content-Type': 'application/json',
+    ...provider.buildHeaders(apiKey),
+  };
+  const payload = provider.buildPayload(input);
+
+  const timeoutMs = provider.name === 'ollama' ? 120000 : 90000;
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const signal = combineSignals(externalSignal, timeoutSignal);
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch (err) {
+    if (err.name === 'TimeoutError') {
+      const e = new Error(`Timeout: el proveedor no respondio en ${timeoutMs / 1000}s`);
+      e.code = 'ETIMEDOUT';
+      e.isRetryable = true;
+      throw e;
+    }
+    if (err.name === 'AbortError') {
+      throw makeAbortError();
+    }
+    const e = new Error(`Error de red: ${err.message}`);
+    e.code = 'ENETWORK';
+    e.isRetryable = true;
+    throw e;
+  }
+
+  const text = await response.text();
+
+  if (!response.ok) {
+    const error = new Error(`HTTP ${response.status}: ${text.slice(0, 200)}`);
+    error.status = response.status;
+
+    if (response.status === 401 || response.status === 403) {
+      error.isRetryable = false;
+      error.message = `API key invalida, expirada o sin permisos (${provider.apiKeyEnv}). Verifica la variable de entorno.`;
+    } else if (response.status === 429) {
+      error.isRetryable = true;
+      const retryAfter = response.headers.get('Retry-After');
+      if (retryAfter) {
+        error.retryAfterMs = parseRetryAfter(retryAfter);
+      }
+    } else if (response.status >= 500 && response.status < 600) {
+      error.isRetryable = true;
+    } else {
+      error.isRetryable = false;
+    }
+
+    throw error;
+  }
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    const e = new Error(`Respuesta no es JSON valido: ${text.slice(0, 200)}`);
+    e.code = 'EINVALIDJSON';
+    e.isRetryable = false;
+    throw e;
+  }
+
+  const rawText = provider.extractText(data);
+  return parseAnalysisFromText(rawText);
+}
+
+/**
+ * @param {string} retryAfter
+ * @returns {number}
+ */
+function parseRetryAfter(retryAfter) {
+  const n = parseInt(retryAfter, 10);
+  if (!Number.isNaN(n)) {
+    return n * 1000;
+  }
+  const retryDate = new Date(retryAfter);
+  if (!isNaN(retryDate.getTime())) {
+    return Math.max(0, retryDate.getTime() - Date.now());
+  }
+  return 5000;
+}
+
+/**
+ * @param {any} err
+ * @returns {boolean}
+ */
+function classifyHttpError(err) {
+  if (!err) return false;
+  if (typeof err.isRetryable === 'boolean') {
+    return err.isRetryable;
+  }
+  if (err.code === 'ETIMEDOUT' || err.code === 'ENETWORK') {
+    return true;
+  }
+  if (err.status === 429 || (err.status >= 500 && err.status < 600)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @param {AbortSignal} [signal1]
+ * @param {AbortSignal} [signal2]
+ * @returns {AbortSignal}
+ */
+function combineSignals(signal1, signal2) {
+  if (!signal1) return signal2;
+  if (!signal2) return signal1;
+
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+
+  if (signal1.aborted || signal2.aborted) {
+    controller.abort();
+  } else {
+    signal1.addEventListener('abort', abort, { once: true });
+    signal2.addEventListener('abort', abort, { once: true });
+  }
+
+  return controller.signal;
+}
+
+/**
+ * @param {string} text
+ * @returns {AnalysisResult}
+ */
+function parseAnalysisFromText(text) {
+  const parsed = parseJSON(text);
+  const normalized = normalizeAnalysis(parsed);
+
+  const result = AnalysisSchema.safeParse(normalized);
+  if (!result.success) {
+    const e = new Error(`Esquema invalido: ${result.error.message}`);
+    e.code = 'ESCHEMA';
+    e.isRetryable = false;
+    throw e;
+  }
+
+  return result.data;
+}
+
+/**
+ * @param {any} raw
+ * @returns {object}
+ */
+function normalizeAnalysis(raw) {
+  const hasTasks = Array.isArray(raw.tasks);
+  const hasActionItems = Array.isArray(raw.action_items);
+
+  const tasks = hasTasks
+    ? raw.tasks.map(t => ({
+        title: String(t.title || ''),
+        description: String(t.description || ''),
+        priority: ['high', 'medium', 'low'].includes(t.priority) ? t.priority : 'medium',
+        owner: t.owner ? String(t.owner) : null,
+        dueDate: t.dueDate ? String(t.dueDate) : null,
+      }))
+    : hasActionItems
+    ? raw.action_items.map(t => ({
+        title: String(t.title || ''),
+        description: String(t.description || ''),
+        priority: 'medium',
+        owner: null,
+        dueDate: null,
+      }))
+    : [];
+
+  const risks = Array.isArray(raw.risks)
+    ? raw.risks.map(r => ({
+        title: String(r.title || ''),
+        description: String(r.description || ''),
+      }))
+    : [];
+
+  const decisions = Array.isArray(raw.decisions)
+    ? raw.decisions.map(d => ({
+        title: String(d.title || ''),
+        description: String(d.description || ''),
+      }))
+    : [];
+
+  const action_items = hasActionItems
+    ? raw.action_items.map(a => ({
+        title: String(a.title || ''),
+        description: String(a.description || ''),
+      }))
+    : hasTasks
+    ? raw.tasks.map(t => ({ title: String(t.title || ''), description: String(t.description || '') }))
+    : [];
+
+  return {
+    summary: String(raw.summary || ''),
+    tasks,
+    risks,
+    decisions,
+    action_items,
+  };
+}
+
+/**
+ * @returns {Record<string, ProviderConfig>}
+ */
+function getProviders() {
+  return {
+    gemini: {
+      name: 'gemini',
+      apiKeyEnv: 'GEMINI_API_KEY',
+      buildUrl: apiKey =>
+        `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-2.5-flash'}:generateContent?key=${apiKey}`,
+      buildHeaders: () => ({}),
+      buildPayload: input => ({
+        contents: [{ parts: [{ text: buildSystemPrompt() + '\n\n' + input }] }],
+        generationConfig: {
+          temperature: 0.2,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 4096,
+          responseMimeType: 'application/json',
+        },
+      }),
+      extractText: data => data?.candidates?.[0]?.content?.parts?.[0]?.text || '',
+    },
+    ollama: {
+      name: 'ollama',
+      apiKeyEnv: '',
+      buildUrl: () => (process.env.OLLAMA_BASE_URL || 'http://localhost:11434') + '/api/chat',
+      buildHeaders: () => ({}),
+      buildPayload: input => ({
+        model: process.env.OLLAMA_MODEL || 'mistral',
+        messages: [
+          { role: 'system', content: buildSystemPrompt() },
+          { role: 'user', content: input },
+        ],
+        stream: false,
+        format: 'json',
+      }),
+      extractText: data => data?.message?.content || data?.response || '',
+    },
+    anthropic: {
+      name: 'anthropic',
+      apiKeyEnv: 'ANTHROPIC_API_KEY',
+      buildUrl: () => 'https://api.anthropic.com/v1/messages',
+      buildHeaders: apiKey => ({
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      }),
+      buildPayload: input => ({
+        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        system: buildSystemPrompt(),
+        messages: [{ role: 'user', content: input }],
+      }),
+      extractText: data => data?.content?.[0]?.text || '',
+    },
+    openai: {
+      name: 'openai',
+      apiKeyEnv: 'OPENAI_API_KEY',
+      buildUrl: () => 'https://api.openai.com/v1/chat/completions',
+      buildHeaders: apiKey => ({ Authorization: `Bearer ${apiKey}` }),
+      buildPayload: input => ({
+        model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+        messages: [
+          { role: 'system', content: buildSystemPrompt() },
+          { role: 'user', content: input },
+        ],
+        temperature: 0.2,
+        max_tokens: 4096,
+        response_format: { type: 'json_object' },
+      }),
+      extractText: data => data?.choices?.[0]?.message?.content || '',
+    },
+    mistral: {
+      name: 'mistral',
+      apiKeyEnv: 'MISTRAL_API_KEY',
+      buildUrl: () => 'https://api.mistral.ai/v1/chat/completions',
+      buildHeaders: apiKey => ({ Authorization: `Bearer ${apiKey}` }),
+      buildPayload: input => ({
+        model: process.env.MISTRAL_MODEL || 'mistral-small-latest',
+        messages: [
+          { role: 'system', content: buildSystemPrompt() },
+          { role: 'user', content: input },
+        ],
+        temperature: 0.2,
+        max_tokens: 4096,
+        response_format: { type: 'json_object' },
+      }),
+      extractText: data => data?.choices?.[0]?.message?.content || '',
+    },
+  };
+}
+
+function buildSystemPrompt() {
+  return `Eres un asistente de analisis de reuniones. Extrae: summary, tasks (action_items), risks, decisions.
+Responde SOLO con JSON valido con esta estructura:
+{
+  "summary": "...",
+  "tasks": [{"title":"...","description":"...","priority":"high|medium|low","owner":"...","dueDate":"YYYY-MM-DD"}],
+  "risks": [{"title":"...","description":"..."}],
+  "decisions": [{"title":"...","description":"..."}],
+  "action_items": [{"title":"...","description":"..."}]
+}`;
+}
+
+export default { analyze };
