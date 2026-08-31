@@ -110,9 +110,9 @@
         document.addEventListener('DOMContentLoaded', () => {
             const scrambleElements = document.querySelectorAll('.scramble-text, .scramble-text-gradient');
             scrambleElements.forEach(el => {
-                const text = el.innerText;
-                el.innerText = '';
-                + setTimeout(() => { new ScrambleText(el, text); }, 1000);
+              const text = el.innerText;
+              el.innerText = '';
+              new ScrambleText(el, text); // Inicia de inmediato
             });
         });
     </script>
