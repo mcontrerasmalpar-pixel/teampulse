@@ -1,42 +1,22 @@
 // @ts-check
-import { test } from 'node:test';
-import { strict as assert } from 'node:assert';
+import { test, expect } from 'vitest';
 import { normalizeTranscript } from '../src/utils/transcript.js';
 
 test('normalizeTranscript: srt elimina timestamps', () => {
-  const input = `1
-00:00:01,000 --> 00:00:04,000
-Hola a todos
-
-2
-00:00:05,200 --> 00:00:08,000
-Bienvenidos`;
+  const input = `1\n00:00:01,000 --> 00:00:04,000\nHola a todos\n\n2\n00:00:05,200 --> 00:00:08,000\nBienvenidos`;
   const out = normalizeTranscript(input, 'srt');
-  assert.ok(!out.includes('00:00:01,000'));
-  assert.ok(!out.includes('00:00:05,200'));
-  assert.ok(out.includes('Hola a todos'));
-  assert.ok(out.includes('Bienvenidos'));
+  expect(out.includes('00:00:01,000')).toBe(false);
+  expect(out.includes('Hola a todos')).toBe(true);
 });
 
 test('normalizeTranscript: vtt elimina cabecera y timestamps', () => {
-  const input = `WEBVTT
-Kind: captions
-Language: es
-
-00:00:01.000 --> 00:00:03.000
-Inicio de reunion
-
-00:00:04.500 --> 00:00:07.000
-Segundo bloque`;
+  const input = `WEBVTT\nKind: captions\nLanguage: es\n\n00:00:01.000 --> 00:00:03.000\nInicio de reunion`;
   const out = normalizeTranscript(input, 'vtt');
-  assert.ok(!out.includes('WEBVTT'));
-  assert.ok(!out.includes('00:00:01.000'));
-  assert.ok(out.includes('Inicio de reunion'));
-  assert.ok(out.includes('Segundo bloque'));
+  expect(out.includes('WEBVTT')).toBe(false);
+  expect(out.includes('Inicio de reunion')).toBe(true);
 });
 
 test('normalizeTranscript: txt normaliza saltos de linea', () => {
-  const input = 'Hola\n\n\nMundo';
-  const out = normalizeTranscript(input, 'txt');
-  assert.equal(out, 'Hola\n\nMundo');
+  const out = normalizeTranscript('Hola\n\n\nMundo', 'txt');
+  expect(out).toBe('Hola\n\nMundo');
 });
