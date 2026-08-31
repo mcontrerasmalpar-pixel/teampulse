@@ -1,42 +1,24 @@
 {
   "name": "teampulse",
   "version": "1.0.0",
-  "description": "Meeting Intelligence Agent - CLI and Extension for meeting analysis",
-  "type": "module",
+  "description": "AI-powered CLI for meeting analysis",
   "main": "src/index.js",
   "bin": {
     "teampulse": "./src/index.js"
   },
+  "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
-    "test": "node --test tests/**/*.test.js",
-    "test:coverage": "node --test --experimental-test-coverage tests/**/*.test.js",
-    "lint": "eslint src/**/*.js",
-    "build": "echo 'No build step required for vanilla JS'"
+    "test": "node --test",
+    "mcp-server": "node src/mcp-server.js"
   },
-  "keywords": [
-    "meeting",
-    "intelligence",
-    "ai",
-    "transcript",
-    "analysis",
-    "cli"
-  ],
-  "author": "Maria Contreras",
+  "keywords": ["cli", "ai", "meetings", "mcp"],
+  "author": "",
   "license": "MIT",
   "dependencies": {
-    "chalk": "^5.3.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
     "commander": "^12.1.0",
-    "ora": "^8.1.0",
-    "zod": "^3.23.8",
-    "p-limit": "^6.1.0",
-    "node-fetch": "^3.3.2"
-  },
-  "devDependencies": {
-    "eslint": "^9.10.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "ora": "^8.2.0",
+    "zod": "^3.25.0"
   }
 }
