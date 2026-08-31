@@ -1,112 +1,37 @@
 # TeamPulse
+
 [![npm version](https://badge.fury.io/js/teampulse.svg)](https://www.npmjs.com/package/teampulse)
-AI-powered CLI for meeting analysis. Extract summaries, tasks, risks, and decisions from transcripts (`.txt`, `.srt`, `.vtt`) using LLM providers like Gemini, Ollama, Anthropic, OpenAI, and Mistral.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Features
+CLI con IA para analizar reuniones. Extrae resumen, tareas, riesgos y decisiones de transcripciones (`.txt`, `.srt`, `.vtt`) usando Gemini, Ollama, Anthropic, OpenAI o Mistral.
 
-- **Multiple AI providers**: Gemini, Ollama (local), Anthropic, OpenAI, Mistral
-- **Fallback support**: Automatically switch to a secondary provider if the primary fails
-- **Robust error handling**: Timeouts, HTTP error classification (401, 429, 5xx), retry logic
-- **Local caching**: SHA-256 hash-based cache to avoid redundant API calls
-- **Atomic memory**: Safe writes to prevent corruption on interruptions
-- **Transcript normalization**: Support for `.srt` and `.vtt` formats from Zoom, Meet, Teams
-- **Batch processing**: Analyze multiple files with configurable concurrency
-- **Tests included**: 3 test files covering parseJSON, transcript, and cache
-- **MCP Server**: Expose TeamPulse as a Model Context Protocol server for AI assistants
-
-## Architecture Overview
-
-```mermaid
-flowchart TD
-    subgraph Input["Input Layer"]
-        A[".txt transcript"]
-        B[".srt subtitles"]
-        C[".vtt captions"]
-    end
-
-    subgraph CLI["TeamPulse CLI"]
-        D["analyze command"]
-        E["batch command"]
-        F["concurrency control"]
-    end
-
-    subgraph MCP["MCP Server"]
-        G["analyze_meeting tool"]
-        H["get_meeting_history tool"]
-    end
-
-    subgraph Utils["Utility Layer"]
-        I["transcript.js<br/>normalize SRT/VTT"]
-        J["cache.js<br/>SHA-256 hash"]
-        K["memory.js<br/>atomic writes"]
-        L["parseJSON.js<br/>robust extraction"]
-        M["schema.js<br/>Zod validation"]
-    end
-
-    subgraph Provider["AI Provider Layer"]
-        N["provider.js<br/>timeouts, retries, fallback"]
-        O["Gemini"]
-        P["Ollama local"]
-        Q["Anthropic"]
-        R["OpenAI"]
-        S["Mistral"]
-    end
-
-    subgraph Storage["Local Storage"]
-        T["~/.teampulse/cache/*.json"]
-        U["~/.teampulse/memory.json"]
-    end
-
-    subgraph Output["Output"]
-        V["Summary"]
-        W["Tasks"]
-        X["Risks"]
-        Y["Decisions"]
-    end
-
-    A & B & C --> D & E
-    D & E --> F
-    F --> I
-    G & H --> I
-    I --> J
-    J --> K
-    K --> L
-    L --> M
-    M --> N
-    N --> O & P & Q & R & S
-    O & P & Q & R & S --> N
-    N --> T & U
-    N --> V & W & X & Y
-
-    style Input fill:#e1f5ff
-    style CLI fill:#fff4e1
-    style MCP fill:#e8f5e9
-    style Utils fill:#f0f0f0
-    style Provider fill:#e8f5e9
-    style Storage fill:#fff9e1
-    style Output fill:#f3e5f5
-```
-
-## Data Flow
-
-1. **Input**: User provides transcript file(s) via `analyze` or `batch` command, or via MCP tool call
-2. **Normalization**: `.srt`/`.vtt` timestamps and metadata are stripped
-3. **Caching**: SHA-256 hash is computed; cache is checked first
-4. **Provider Call**: If not cached, request is sent to AI provider with timeout
-5. **Error Handling**: HTTP errors are classified (401, 429, 5xx) and handled appropriately
-6. **Fallback**: If primary provider fails after retries, secondary provider is used
-7. **Validation**: Response is parsed and validated against Zod schema
-8. **Storage**: Result is cached and meeting is recorded in memory
-9. **Output**: Structured summary, tasks, risks, and decisions are displayed
-
-## Installation
+**v1.0.1** · Node.js >= 18 · MIT
 
 ```bash
 npx teampulse analyze meeting.txt
 npm i -g teampulse
 ```
 
-From source:
+## Contenido
+
+- [Instalación](#instalación)
+- [Configuración](#configuración)
+- [Uso CLI](#uso-cli)
+- [Servidor MCP](#servidor-mcp)
+- [Formatos](#formatos)
+- [Salida](#salida)
+- [Arquitectura](#arquitectura)
+- [Tests](#tests)
+- [Licencia](#licencia)
+
+## Instalación
+
+```bash
+npx teampulse analyze meeting.txt
+npm i -g teampulse
+```
+
+Desde el código fuente:
 
 ```bash
 git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git
@@ -114,17 +39,24 @@ cd teampulse
 npm install
 ```
 
-Requires Node.js 18 or later.
+Requiere **Node.js 18 o superior**.
 
-## Configuration
+Bins publicados:
 
-Set environment variables for your preferred AI provider:
+| Comando | Qué hace |
+| --- | --- |
+| `teampulse` | CLI (`analyze`, `batch`, `mcp`) |
+| `teampulse-mcp` | Servidor MCP por stdio |
+
+## Configuración
+
+Define las variables del proveedor que vayas a usar:
 
 ```bash
-# Gemini (default)
+# Gemini (por defecto)
 export GEMINI_API_KEY="your-api-key"
 
-# Ollama (local, no API key required)
+# Ollama (local, sin API key)
 export OLLAMA_BASE_URL="http://localhost:11434"
 export OLLAMA_MODEL="mistral"
 
@@ -141,43 +73,43 @@ export MISTRAL_API_KEY="your-api-key"
 export MISTRAL_MODEL="mistral-small-latest"
 ```
 
-## Usage
+## Uso CLI
 
-### CLI: Analyze a single transcript
+### Una transcripción
 
 ```bash
 teampulse analyze meeting.txt
-
-# With custom provider
 teampulse analyze meeting.txt --provider ollama
-
-# With fallback provider
 teampulse analyze meeting.txt --provider gemini --fallback-provider ollama --fallback-model mistral
 ```
 
-### CLI: Analyze multiple transcripts (batch)
+Opciones:
+
+- `-p, --provider` — `gemini` (default), `ollama`, `anthropic`, `openai`, `mistral`
+- `--fallback-provider` — proveedor si falla el principal
+- `--fallback-model` — modelo del fallback
+
+### Varias transcripciones (batch)
 
 ```bash
 teampulse batch ./meetings
-
-# With custom concurrency
 teampulse batch ./meetings --concurrency 3
-
-# With fallback
 teampulse batch ./meetings --provider gemini --fallback-provider ollama
 ```
 
-### MCP Server: Run as stdio server
+## Servidor MCP
+
+No uses una ruta absoluta a `src/mcp-server.js`. Arranca el bin publicado:
 
 ```bash
 npx teampulse mcp
-# or
+# o
 npx teampulse-mcp
 ```
 
-### MCP Server: Configure Claude Desktop
+### Claude Desktop
 
-Add to your Claude Desktop configuration (`claude_desktop_config.json`):
+En `claude_desktop_config.json`:
 
 ```json
 {
@@ -186,15 +118,14 @@ Add to your Claude Desktop configuration (`claude_desktop_config.json`):
       "command": "npx",
       "args": ["-y", "teampulse", "mcp"],
       "env": {
-        "GEMINI_API_KEY": "your-api-key",
-        "ANTHROPIC_API_KEY": "your-claude-api-key"
+        "GEMINI_API_KEY": "your-api-key"
       }
     }
   }
 }
 ```
 
-Equivalent using the dedicated bin:
+Equivalente con el bin dedicado:
 
 ```json
 {
@@ -210,81 +141,36 @@ Equivalent using the dedicated bin:
 }
 ```
 
-### MCP Server: Available Tools
+### Tools
 
-#### `analyze_meeting`
+**`analyze_meeting`** — analiza una transcripción.
 
-Analyze a meeting transcript and extract structured information.
+| Param | Requerido | Descripción |
+| --- | --- | --- |
+| `transcript` | sí | Texto de la reunión |
+| `format` | no | `txt`, `srt` o `vtt` |
+| `provider` | no | proveedor de IA |
+| `fallbackProvider` | no | proveedor de respaldo |
+| `useCache` | no | cache local (default `true`) |
 
-**Parameters:**
-- `transcript` (required): Meeting transcript text
-- `format` (optional): `txt`, `srt`, or `vtt` (auto-detected if not specified)
-- `provider` (optional): AI provider (`gemini`, `ollama`, `anthropic`, `openai`, `mistral`)
-- `fallbackProvider` (optional): Fallback provider if primary fails
-- `useCache` (optional): Use local cache if available (default: `true`)
+**`get_meeting_history`** — historial en `~/.teampulse/memory.json`.
 
-**Example (via MCP client):**
+| Param | Requerido | Descripción |
+| --- | --- | --- |
+| `limit` | no | máximo de reuniones (default `10`) |
 
-```json
-{
-  "tool": "analyze_meeting",
-  "arguments": {
-    "transcript": "00:00:01,000 --> 00:00:04,000\nWelcome to the team sync...",
-    "format": "srt",
-    "provider": "gemini",
-    "fallbackProvider": "ollama"
-  }
-}
-```
+## Formatos
 
-**Response:**
+- `.txt` — texto plano
+- `.srt` — SubRip (Zoom, Meet)
+- `.vtt` — WebVTT (Teams, Meet)
 
-```json
-{
-  "summary": "Team sync to discuss Q3 roadmap and blockers.",
-  "tasks": [
-    {"title": "Fix production bug", "priority": "high", "owner": "alice"},
-    {"title": "Update documentation", "priority": "medium", "owner": "bob"}
-  ],
-  "risks": [{"title": "Dependency delay from vendor"}],
-  "decisions": [{"title": "Adopt new CI/CD pipeline"}]
-}
-```
+## Salida
 
-#### `get_meeting_history`
-
-Retrieve history of analyzed meetings from local memory.
-
-**Parameters:**
-- `limit` (optional): Maximum number of meetings to return (default: 10)
-
-**Example:**
-
-```json
-{
-  "tool": "get_meeting_history",
-  "arguments": {
-    "limit": 5
-  }
-}
-```
-
-### Supported transcript formats
-
-- `.txt` - Plain text
-- `.srt` - SubRip subtitles (Zoom, Meet exports)
-- `.vtt` - WebVTT (Teams, Meet exports)
-
-## Output
-
-TeamPulse extracts structured information:
-
-- **Summary**: Brief overview of the meeting
-- **Tasks**: Action items with priority, owner, and due date
-- **Risks**: Potential issues or blockers
-- **Decisions**: Key decisions made during the meeting
-
-Example output:
+- **Resumen**
+- **Tareas** (prioridad, owner)
+- **Riesgos**
+- **Decisiones**
 
 ```
 ✅ Analisis completado
@@ -303,54 +189,94 @@ Decisiones:
 ✅ Adopt new CI/CD pipeline
 ```
 
-## Core Modules
+Datos locales:
 
-- `src/services/provider.js` - AI provider abstraction with timeouts, retries, fallback
-- `src/utils/memory.js` - Atomic writes to `~/.teampulse/memory.json`
-- `src/utils/parseJSON.js` - Robust JSON extraction from LLM responses
-- `src/utils/schema.js` - Zod validation for structured output
-- `src/utils/transcript.js` - SRT/VTT normalization
-- `src/utils/cache.js` - SHA-256 content-based caching
-- `src/commands/analyze.js` - Single file analysis
-- `src/commands/batch.js` - Batch processing with concurrency control
-- `src/mcp-server.js` - MCP server exposing TeamPulse tools
+- Memoria: `~/.teampulse/memory.json` (escrituras atómicas)
+- Cache: `~/.teampulse/cache/*.json` (clave SHA-256)
+- Permisos Unix: directorio `0o700`, archivos `0o600`
 
-## Error Handling
+## Arquitectura
 
-- **401/403**: Invalid or expired API key (non-retryable)
-- **429**: Rate limit exceeded (respects `Retry-After` header)
-- **5xx**: Server errors (retryable with exponential backoff)
-- **Timeout**: Provider did not respond within configured time (retryable)
-- **Network errors**: Connection issues (retryable)
+```mermaid
+flowchart TD
+    subgraph Input["Input"]
+        A[".txt"]
+        B[".srt"]
+        C[".vtt"]
+    end
 
-## Testing
+    subgraph CLI["CLI"]
+        D["analyze"]
+        E["batch"]
+        MCPCMD["mcp"]
+    end
 
-```bash
-# Run all tests
-npm test
+    subgraph MCP["MCP"]
+        G["analyze_meeting"]
+        H["get_meeting_history"]
+    end
 
-# Tests cover:
-# - parseJSON: direct, fenced, prose-wrapped JSON
-# - transcript: SRT/VTT timestamp removal
-# - cache: SHA-256 hash consistency
+    subgraph Utils["Utils"]
+        I["transcript"]
+        J["cache"]
+        K["memory"]
+        L["parseJSON"]
+        M["schema"]
+    end
+
+    subgraph Provider["Providers"]
+        N["provider.js"]
+        O["Gemini"]
+        P["Ollama"]
+        Q["Anthropic"]
+        R["OpenAI"]
+        S["Mistral"]
+    end
+
+    A & B & C --> D & E
+    MCPCMD --> G & H
+    D & E --> I
+    G & H --> I
+    I --> J --> K --> L --> M --> N
+    N --> O & P & Q & R & S
 ```
 
-There are 3 test files: `test/parseJSON.test.js`, `test/transcript.test.js`, and `test/cache.test.js`.
+Flujo: normalizar → cache SHA-256 → proveedor (timeout / retry / fallback) → validar con Zod → guardar → imprimir.
 
-## Data Storage
+Errores HTTP:
 
-- **Memory**: `~/.teampulse/memory.json` (versioned, atomic writes)
-- **Cache**: `~/.teampulse/cache/*.json` (SHA-256 keyed, atomic writes)
-- **Permissions**: Directory `0o700`, files `0o600` (Unix)
+- **401/403** — API key inválida (no reintenta)
+- **429** — rate limit (`Retry-After`)
+- **5xx / timeout / red** — reintento con backoff
 
-## Contributing
+Módulos:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Commit your changes (`git commit -m 'Add my feature'`)
-4. Push to the branch (`git push origin feature/my-feature`)
-5. Open a Pull Request
+- `src/index.js` — CLI (`teampulse`)
+- `src/mcp-server.js` — MCP (`teampulse-mcp`)
+- `src/commands/analyze.js` / `batch.js`
+- `src/services/provider.js`
+- `src/utils/{transcript,cache,memory,parseJSON,schema}.js`
 
-## License
+## Tests
 
-MIT
+Hay **3** archivos de test (no hay una suite de “10+”):
+
+- `test/parseJSON.test.js` — JSON directo, fenced y envuelto en prosa
+- `test/transcript.test.js` — limpieza de timestamps SRT/VTT
+- `test/cache.test.js` — consistencia del hash SHA-256
+
+```bash
+npm test
+```
+
+## Contribuir
+
+1. Fork
+2. `git checkout -b feature/mi-cambio`
+3. `git commit -m 'Describe el cambio'`
+4. `git push origin feature/mi-cambio`
+5. Abre un Pull Request
+
+## Licencia
+
+MIT. Ver [LICENSE](LICENSE).
