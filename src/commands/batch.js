@@ -1,159 +1,118 @@
-import { readdirSync, statSync, writeFileSync } from 'fs';
-import { resolve, basename, extname } from 'path';
-import chalk from 'chalk';
-import { analyzeFile } from './analyze.js';
-import { resolveProvider, getProviderLabel } from '../services/provider.js';
-import {
-  printError, printInfo, printSection, printSuccess, printWarn,
-  printProviderTag, printTiming, printProviderError, createSpinner
-} from '../utils/ui.js';
+// @ts-check
+import { promises as fs } from 'node:fs';
+import { join, basename } from 'node:path';
+import { analyze } from '../services/provider.js';
+import { hashFile, getCache, saveCache } from '../utils/cache.js';
+import { addMeeting } from '../utils/memory.js';
+import { normalizeTranscript, detectTranscriptFormat } from '../utils/transcript.js';
+import ora from 'ora';
 
-export async function batchCommand(dir, options) {
-  const { provider = 'gemini', model: modelOverride, skill = 'product-manager', since, filter, title, output, format = 'plain' } = options;
-  const { name: provName, model } = resolveProvider(provider, modelOverride);
-  const provLabel = getProviderLabel(provName, model);
+/**
+ * @param {string} dir
+ * @param {object} options
+ * @param {number} [options.concurrency=2]
+ * @param {string} [options.provider='gemini']
+ * @param {string} [options.fallbackProvider]
+ * @param {string} [options.fallbackModel]
+ */
+export async function batchCommand(dir, options = {}) {
+  const concurrency = options.concurrency ?? 2;
+  const providerName = options.provider || 'gemini';
+  const fallbackProvider = options.fallbackProvider;
+  const fallbackModel = options.fallbackModel;
 
-  const fullDir = resolve(dir);
+  const spinner = ora('Escaneando archivos').start();
 
-  let files;
-  try {
-    files = readdirSync(fullDir)
-      .filter(f => extname(f) === '.txt')
-      .map(f => resolve(fullDir, f));
-  } catch (err) {
-    printError(`Cannot read directory: ${err.message}`);
-    process.exit(1);
-  }
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const files = entries
+    .filter(e => e.isFile())
+    .map(e => join(dir, e.name))
+    .filter(f => /\.(txt|srt|vtt)$/i.test(f));
 
   if (files.length === 0) {
-    printWarn(`No .txt files found in ${fullDir}`);
-    process.exit(0);
+    spinner.fail('No se encontraron archivos .txt, .srt o .vtt');
+    return;
   }
 
-  if (since) {
-    const sinceDate = new Date(since);
-    if (isNaN(sinceDate)) {
-      printError(`Invalid date for --since: ${since}. Use YYYY-MM-DD.`);
-      process.exit(1);
-    }
-    files = files.filter(f => statSync(f).mtime >= sinceDate);
-    if (files.length === 0) {
-      printWarn(`No .txt files found modified after ${since}`);
-      process.exit(0);
-    }
-  }
+  spinner.text = `${files.length} archivos encontrados`;
 
-  const label = title ? chalk.bold.white(` — ${title}`) : '';
-  console.log(`\n${chalk.bold.cyan('  Batch Analysis')}${label}`);
-  printProviderTag(provName, model);
-  printInfo(`Found ${files.length} transcript(s) in ${chalk.dim(fullDir)}`);
-  printInfo(`Skill: ${chalk.cyan(skill)}`);
-  if (since) printInfo(`Since: ${since}`);
-  console.log();
-
+  const queue = [...files];
+  const running = [];
   const results = [];
-  let passed = 0;
-  let failed = 0;
-  const startMs = Date.now();
 
-  for (const filePath of files) {
-    const name = basename(filePath);
-    const spinner = createSpinner(`Analyzing ${chalk.cyan(name)}…`);
-    try {
-      const analysis = await analyzeFile(filePath, { provider: provName, model, skill });
-      spinner.succeed(chalk.green(`✓ ${name}`));
-      results.push({ file: name, ...analysis });
-      passed++;
-    } catch (err) {
-      spinner.fail(chalk.red(`✗ ${name}: ${err.message}`));
-      printProviderError(provName);
-      failed++;
+  while (queue.length > 0 || running.length > 0) {
+    while (running.length < concurrency && queue.length > 0) {
+      const file = queue.shift();
+      const promise = processFile(file, providerName, fallbackProvider, fallbackModel)
+        .then(res => {
+          results.push({ file, ...res });
+        })
+        .catch(err => {
+          results.push({ file, error: err.message });
+        })
+        .finally(() => {
+          const idx = running.indexOf(promise);
+          if (idx !== -1) running.splice(idx, 1);
+        });
+      running.push(promise);
+    }
+
+    if (running.length > 0) {
+      await Promise.race(running);
     }
   }
 
-  // ── Consolidated output ─────────────────────────────────────────────────────────
-  console.log(`\n${chalk.bold.cyan('  ── Batch Summary ──')}`);
-  printInfo(`${chalk.green(`${passed} succeeded`)}  ${failed > 0 ? chalk.red(`${failed} failed`) : ''}`);
-  printTiming(startMs);
+  spinner.stop();
 
-  const allDecisions = results.flatMap(r => (r.decisions || []).map(d => ({ ...d, _file: r.file })));
-  const allTasks     = results.flatMap(r => (r.tasks     || []).map(t => ({ ...t, _file: r.file })));
-  const allRisks     = results.flatMap(r => (r.risks     || []).map(k => ({ ...k, _file: r.file })));
-
-  const show = f => !filter || filter === f;
-
-  if (show('decision') && allDecisions.length) {
-    printSection(`Decisions (${allDecisions.length} total)`, '', 'cyan');
-    allDecisions.forEach(d => {
-      console.log(
-        `  ${chalk.bold(d.title)}` +
-        chalk.dim(` [${d._file}]`) +
-        `  ${chalk.dim('owner:')} ${d.owner || chalk.red('⚠ none')}` +
-        `  ${chalk.dim('status:')} ${d.status || '—'}`
-      );
-    });
-  }
-
-  if (show('task') && allTasks.length) {
-    printSection(`Tasks (${allTasks.length} total)`, '', 'yellow');
-    const unassigned = allTasks.filter(t => !t.owner);
-    allTasks.forEach(t => {
-      const pColor = t.priority === 'high' ? 'red' : t.priority === 'medium' ? 'yellow' : 'dim';
-      console.log(
-        `  ${chalk.dim('○')} ${t.description}` +
-        chalk.dim(` [${t._file}]`) +
-        `  ${chalk.dim('owner:')} ${t.owner || chalk.red('⚠ none')}` +
-        `  ${chalk[pColor](`[${t.priority}]`)}`
-      );
-    });
-    if (unassigned.length)
-      console.log(`\n  ${chalk.red('⚠')} ${chalk.yellow(`${unassigned.length} unassigned task(s) across all meetings`)}`);
-  }
-
-  if (show('risk') && allRisks.length) {
-    printSection(`Risks (${allRisks.length} total)`, '', 'red');
-    allRisks.forEach(r => {
-      const lColor = r.level === 'high' ? 'red' : r.level === 'medium' ? 'yellow' : 'dim';
-      console.log(
-        `  ${chalk[lColor](`[${r.level?.toUpperCase()}]`)} ${r.description}` +
-        chalk.dim(` [${r._file}]`)
-      );
-    });
-  }
-
-  if (results.length > 0)
-    printInfo(`Run ${chalk.cyan('teampulse chat')} to explore all analyzed meetings interactively.`);
-
-  // ── --output: save consolidated results to file ───────────────────────────────
-  if (output && results.length > 0) {
-    const payload = { total: results.length, passed, failed, decisions: allDecisions, tasks: allTasks, risks: allRisks };
-    if (format === 'json') {
-      writeFileSync(output, JSON.stringify(payload, null, 2));
-      printSuccess(`Batch JSON saved to ${output}`);
+  console.log('\nResultados:');
+  for (const r of results) {
+    if (r.error) {
+      console.log(`❌ ${basename(r.file)}: ${r.error}`);
     } else {
-      const lines = [
-        `# Batch Analysis — ${title || dir}`,
-        `\nAnalyzed: ${passed}/${results.length} files  |  ${new Date().toISOString()}\n`,
-      ];
-      if (allDecisions.length) {
-        lines.push('## Decisions\n');
-        allDecisions.forEach(d => lines.push(`- **${d.title}** [${d._file}] — ${d.owner || '⚠ unassigned'} · ${d.status || '—'}`));
-        lines.push('');
-      }
-      if (allTasks.length) {
-        lines.push('## Tasks\n');
-        allTasks.forEach(t => lines.push(`- [${t.done ? 'x' : ' '}] ${t.description} [${t._file}] — ${t.owner || '⚠ unassigned'} [${t.priority}]`));
-        lines.push('');
-      }
-      if (allRisks.length) {
-        lines.push('## Risks\n');
-        allRisks.forEach(r => lines.push(`- [${r.level?.toUpperCase()}] ${r.description} [${r._file}]`));
-        lines.push('');
-      }
-      writeFileSync(output, lines.join('\n'));
-      printSuccess(`Batch markdown saved to ${output}`);
+      console.log(`✅ ${basename(r.file)}: ${r.summary ? r.summary.slice(0, 60) : 'OK'}`);
     }
   }
-
-  console.log();
 }
+
+/**
+ * @param {string} file
+ * @param {string} providerName
+ * @param {string} [fallbackProvider]
+ * @param {string} [fallbackModel]
+ * @returns {Promise<{summary: string}>}
+ */
+async function processFile(file, providerName, fallbackProvider, fallbackModel) {
+  const content = await fs.readFile(file, 'utf-8');
+  const format = detectTranscriptFormat(file);
+  const normalized = normalizeTranscript(content, format);
+
+  const hash = await hashFile(Buffer.from(normalized, 'utf-8'));
+  const cached = await getCache(hash);
+
+  if (cached) {
+    await addMeeting(file, hash, cached.summary);
+    return { summary: cached.summary };
+  }
+
+  const result = await analyze(normalized, providerName, undefined, { fallbackProvider, fallbackModel });
+  await saveCache(hash, result);
+  await addMeeting(file, hash, result.summary);
+
+  return { summary: result.summary };
+}
+
+export function registerBatchCommand(cli) {
+  cli
+    .command('batch <dir>')
+    .description('Analiza múltiples transcripciones en un directorio')
+    .option('-c, --concurrency <n>', 'Archivos procesados en paralelo', '2')
+    .option('-p, --provider <name>', 'Proveedor de IA', 'gemini')
+    .option('--fallback-provider <name>', 'Proveedor secundario')
+    .option('--fallback-model <model>', 'Modelo del proveedor secundario')
+    .action((dir, options) => {
+      const concurrency = parseInt(options.concurrency, 10);
+      batchCommand(dir, { ...options, concurrency });
+    });
+}
+
+export default { batchCommand, registerBatchCommand };
