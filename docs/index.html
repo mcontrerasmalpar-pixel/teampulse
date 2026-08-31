@@ -8,505 +8,76 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f9f9f9;
-            --bg-tertiary: #f0f0f0;
-            --text-primary: #0a0a0a;
-            --text-secondary: #666666;
-            --text-tertiary: #999999;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --border: #e5e5e5;
-            --gradient-1: #3b82f6;
-            --gradient-2: #8b5cf6;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-
-        /* Navbar */
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
-        }
-
-        nav .container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 64px;
-        }
-
-        .logo {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-primary);
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 32px;
-            align-items: center;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-        }
-
-        .btn-primary {
-            background: var(--text-primary);
-            color: var(--bg-primary);
-            padding: 10px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 14px;
-            transition: transform 0.2s;
-            display: inline-block;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-        }
-
-        /* Hero */
-        .hero {
-            padding: 160px 0 100px;
-            text-align: center;
-            position: relative;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -100px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .hero h1 {
-            font-size: 64px;
-            font-weight: 700;
-            line-height: 1.1;
-            margin-bottom: 24px;
-            letter-spacing: -0.02em;
-        }
-
-        .hero h1 span {
-            background: linear-gradient(135deg, var(--gradient-1), var(--gradient-2));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero p {
-            font-size: 20px;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto 40px;
-            line-height: 1.7;
-        }
-
-        .hero-cta {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            margin-bottom: 60px;
-        }
-
-        .btn-large {
-            padding: 14px 32px;
-            font-size: 16px;
-        }
-
-        .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            padding: 14px 32px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 16px;
-            border: 1px solid var(--border);
-            transition: all 0.2s;
-            display: inline-block;
-        }
-
-        .btn-secondary:hover {
-            background: var(--bg-tertiary);
-            border-color: var(--text-tertiary);
-        }
-
-        /* Terminal */
-        .terminal-section {
-            padding: 80px 0;
-        }
-
-        .terminal-window {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        }
-
-        .terminal-header {
-            background: var(--bg-tertiary);
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .terminal-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--text-tertiary);
-        }
-
-        .terminal-dot.red { background: #ff5f56; border: none; }
-        .terminal-dot.yellow { background: #ffbd2e; border: none; }
-        .terminal-dot.green { background: #27c93f; border: none; }
-
-        .terminal-body {
-            padding: 24px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            line-height: 1.8;
-            color: var(--text-secondary);
-        }
-
-        .command {
-            color: var(--text-primary);
-            margin-bottom: 16px;
-        }
-
-        .command .prompt {
-            color: var(--accent);
-            margin-right: 8px;
-        }
-
-        .output {
-            color: var(--text-secondary);
-            margin-bottom: 16px;
-        }
-
-        .output .success {
-            color: #27c93f;
-        }
-
-        .output .task-high {
-            color: #ff5f56;
-        }
-
-        .output .task-medium {
-            color: #ffbd2e;
-        }
-
-        .output .task-low {
-            color: #27c93f;
-        }
-
-        /* Features */
-        .features {
-            padding: 120px 0;
-            background: var(--bg-secondary);
-        }
-
-        .features h2 {
-            font-size: 40px;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 16px;
-            letter-spacing: -0.02em;
-        }
-
-        .features p {
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 18px;
-            margin-bottom: 80px;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
-        }
-
-        .feature-card {
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            padding: 32px;
-            border-radius: 12px;
-            transition: all 0.3s;
-        }
-
-        .feature-card:hover {
-            border-color: var(--text-tertiary);
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-        }
-
-        .feature-icon {
-            font-size: 24px;
-            margin-bottom: 16px;
-        }
-
-        .feature-card h3 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-
-        .feature-card p {
-            text-align: left;
-            font-size: 15px;
-            color: var(--text-secondary);
-            margin-bottom: 0;
-        }
-
-        /* CTA */
-        .cta-section {
-            padding: 120px 0;
-            text-align: center;
-        }
-
-        .cta-section h2 {
-            font-size: 40px;
-            font-weight: 700;
-            margin-bottom: 24px;
-            letter-spacing: -0.02em;
-        }
-
-        .cta-section p {
-            color: var(--text-secondary);
-            font-size: 18px;
-            margin-bottom: 40px;
-        }
-
-        /* Footer */
-        footer {
-            border-top: 1px solid var(--border);
-            padding: 60px 0;
-            background: var(--bg-secondary);
-        }
-
-        .footer-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .footer-left {
-            color: var(--text-tertiary);
-            font-size: 14px;
-        }
-
-        .footer-links {
-            display: flex;
-            gap: 24px;
-        }
-
-        .footer-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            transition: color 0.2s;
-        }
-
-        .footer-links a:hover {
-            color: var(--text-primary);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 40px;
-            }
-
-            .hero p {
-                font-size: 16px;
-            }
-
-            .hero-cta {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .nav-links {
-                display: none;
-            }
-
-            .features h2 {
-                font-size: 32px;
-            }
-
-            .terminal-body {
-                font-size: 12px;
-                padding: 16px;
-            }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg-primary: #ffffff; --bg-secondary: #f9f9f9; --bg-tertiary: #f0f0f0; --text-primary: #0a0a0a; --text-secondary: #666666; --text-tertiary: #999999; --accent: #3b82f6; --accent-hover: #2563eb; --border: #e5e5e5; --gradient-1: #3b82f6; --gradient-2: #8b5cf6; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        nav .container { display: flex; justify-content: space-between; align-items: center; height: 64px; }
+        .logo { font-size: 20px; font-weight: 600; color: var(--text-primary); text-decoration: none; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text-primary); }
+        .btn-primary { background: var(--text-primary); color: var(--bg-primary); padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; transition: transform 0.2s; display: inline-block; }
+        .btn-primary:hover { transform: translateY(-2px); }
+        .hero { padding: 160px 0 100px; text-align: center; position: relative; }
+        .hero::before { content: ''; position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 600px; height: 600px; background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%); pointer-events: none; }
+        .hero h1 { font-size: 64px; font-weight: 700; line-height: 1.1; margin-bottom: 24px; letter-spacing: -0.02em; }
+        .hero h1 span { background: linear-gradient(135deg, var(--gradient-1), var(--gradient-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero p { font-size: 20px; color: var(--text-secondary); max-width: 600px; margin: 0 auto 40px; line-height: 1.7; }
+        .hero-cta { display: flex; gap: 16px; justify-content: center; margin-bottom: 60px; }
+        .btn-large { padding: 14px 32px; font-size: 16px; }
+        .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; border: 1px solid var(--border); transition: all 0.2s; display: inline-block; }
+        .btn-secondary:hover { background: var(--bg-tertiary); border-color: var(--text-tertiary); }
+        .terminal-section { padding: 80px 0; }
+        .terminal-window { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
+        .terminal-header { background: var(--bg-tertiary); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border); }
+        .terminal-dots { display: flex; gap: 8px; }
+        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--bg-tertiary); border: 1px solid var(--text-tertiary); }
+        .terminal-dot.red { background: #ff5f56; border: none; } .terminal-dot.yellow { background: #ffbd2e; border: none; } .terminal-dot.green { background: #27c93f; border: none; }
+        .copy-btn { background: transparent; border: 1px solid var(--border); color: var(--text-tertiary); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+        .copy-btn:hover { background: var(--bg-primary); color: var(--text-primary); border-color: var(--text-tertiary); }
+        .terminal-body { padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
+        .command { color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+        .command-code { display: flex; align-items: center; gap: 8px; } .command .prompt { color: var(--accent); margin-right: 8px; }
+        .output { color: var(--text-secondary); margin-bottom: 16px; } .output .success, .output .task-low { color: #27c93f; } .output .task-high { color: #ff5f56; } .output .task-medium { color: #ffbd2e; }
+        .mcp-section { padding: 80px 0; background: var(--bg-secondary); }
+        .mcp-section h2, .features h2 { font-size: 40px; font-weight: 700; text-align: center; margin-bottom: 16px; letter-spacing: -0.02em; }
+        .mcp-section p, .features > .container > p { text-align: center; color: var(--text-secondary); font-size: 18px; margin-bottom: 40px; }
+        .mcp-config { max-width: 700px; margin: 0 auto; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .mcp-config-header { background: var(--bg-tertiary); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .mcp-config-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .mcp-config-body { padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; color: var(--text-secondary); overflow-x: auto; }
+        .mcp-config-body pre { margin: 0; white-space: pre; }
+        .features { padding: 120px 0; background: var(--bg-secondary); } .features > .container > p { margin-bottom: 80px; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+        .feature-card { background: var(--bg-primary); border: 1px solid var(--border); padding: 32px; border-radius: 12px; transition: all 0.3s; }
+        .feature-card:hover { border-color: var(--text-tertiary); transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06); }
+        .feature-icon { font-size: 24px; margin-bottom: 16px; } .feature-card h3 { font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+        .feature-card p { text-align: left; font-size: 15px; color: var(--text-secondary); margin-bottom: 0; }
+        .cta-section { padding: 120px 0; text-align: center; } .cta-section h2 { font-size: 40px; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.02em; } .cta-section p { color: var(--text-secondary); font-size: 18px; margin-bottom: 40px; }
+        footer { border-top: 1px solid var(--border); padding: 60px 0; background: var(--bg-secondary); } .footer-content { display: flex; justify-content: space-between; align-items: center; } .footer-left { color: var(--text-tertiary); font-size: 14px; } .footer-links { display: flex; gap: 24px; } .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; transition: color 0.2s; } .footer-links a:hover { color: var(--text-primary); }
+        @media (max-width: 768px) { .hero h1 { font-size: 40px; } .hero p { font-size: 16px; } .hero-cta { flex-direction: column; align-items: center; } .nav-links { display: none; } .features h2, .mcp-section h2 { font-size: 32px; } .terminal-body, .mcp-config-body { font-size: 12px; padding: 16px; } }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav>
-        <div class="container">
-            <a href="#" class="logo">TeamPulse</a>
-            <div class="nav-links">
-                <a href="#features">Features</a>
-                <a href="#docs">Docs</a>
-                <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">GitHub</a>
-                <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary">Get Started</a>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Hero -->
-    <section class="hero">
-        <div class="container">
-            <h1>AI-powered meeting<br><span>analysis for teams</span></h1>
-            <p>Extract summaries, tasks, risks, and decisions from your meeting transcripts automatically. Supports Zoom, Meet, Teams exports.</p>
-            <div class="hero-cta">
-                <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary btn-large">Start for free</a>
-                <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-secondary btn-large">View on GitHub</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Terminal -->
-    <section class="terminal-section">
-        <div class="container">
-            <div class="terminal-window">
-                <div class="terminal-header">
-                    <div class="terminal-dot red"></div>
-                    <div class="terminal-dot yellow"></div>
-                    <div class="terminal-dot green"></div>
-                </div>
-                <div class="terminal-body">
-                    <div class="command">
-                        <span class="prompt">$</span>npm install -g teampulse
-                    </div>
-                    <div class="command">
-                        <span class="prompt">$</span>teampulse analyze meeting.txt
-                    </div>
-                    <div class="output">
-                        <span class="success">✓</span> Analysis complete<br><br>
-                        <span class="success">Summary:</span> Team sync to discuss Q3 roadmap and blockers.<br><br>
-                        <span class="task-high">●</span> Fix production bug (@alice)<br>
-                        <span class="task-medium">●</span> Update documentation (@bob)<br>
-                        <span class="task-low">●</span> Schedule follow-up meeting<br><br>
-                        <span class="success">●</span> Adopt new CI/CD pipeline
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features -->
-    <section class="features" id="features">
-        <div class="container">
-            <h2>Everything you need</h2>
-            <p>Powerful features built for modern teams</p>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🤖</div>
-                    <h3>Multiple AI providers</h3>
-                    <p>Gemini, Ollama, Anthropic, OpenAI, Mistral. Choose your preferred provider or use fallback.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>Lightning fast</h3>
-                    <p>Local caching with SHA-256 hashing means you never pay for the same analysis twice.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3>Atomic writes</h3>
-                    <p>Safe memory writes prevent corruption. Your data is always consistent.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📝</div>
-                    <h3>Any format</h3>
-                    <p>.txt, .srt, .vtt - we handle Zoom, Meet, Teams exports automatically.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔄</div>
-                    <h3>Fallback support</h3>
-                    <p>Primary provider down? Automatically switch to secondary without interruption.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔧</div>
-                    <h3>MCP Server</h3>
-                    <p>Integrate with AI assistants via Model Context Protocol for seamless workflows.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="cta-section">
-        <div class="container">
-            <h2>Ready to analyze your meetings?</h2>
-            <p>Join teams using TeamPulse for smarter meeting analysis</p>
-            <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary btn-large">Get started for free</a>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-left">
-                    © 2026 TeamPulse. Open source.
-                </div>
-                <div class="footer-links">
-                    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">GitHub</a>
-                    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">Docs</a>
-                    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">Twitter</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <nav><div class="container"><a href="#" class="logo">TeamPulse</a><div class="nav-links"><a href="#features">Features</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse#readme" target="_blank">Docs</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">GitHub</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary">Get Started</a></div></div></nav>
+    <section class="hero"><div class="container"><h1>AI-powered meeting<br><span>analysis for teams</span></h1><p>Extract summaries, tasks, risks, and decisions from your meeting transcripts automatically. Supports Zoom, Meet, Teams exports.</p><div class="hero-cta"><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary btn-large">Start for free</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-secondary btn-large">View on GitHub</a></div></div></section>
+    <section class="terminal-section"><div class="container"><div class="terminal-window"><div class="terminal-header"><div class="terminal-dots"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div></div></div><div class="terminal-body"><div class="command"><div class="command-code"><span class="prompt">$</span>npm install -g teampulse</div><button class="copy-btn" onclick="copyToClipboard('npm install -g teampulse')">Copy</button></div><div class="command"><div class="command-code"><span class="prompt">$</span>npx teampulse analyze meeting.vtt</div><button class="copy-btn" onclick="copyToClipboard('npx teampulse analyze meeting.vtt')">Copy</button></div><div class="command"><div class="command-code"><span class="prompt">$</span>teampulse analyze meeting.txt</div><button class="copy-btn" onclick="copyToClipboard('teampulse analyze meeting.txt')">Copy</button></div><div class="output"><span class="success">✓</span> Analysis complete<br><br><span class="success">Summary:</span> Team sync to discuss Q3 roadmap and blockers.<br><br><span class="task-high">●</span> Fix production bug (@alice)<br><span class="task-medium">●</span> Update documentation (@bob)<br><span class="task-low">●</span> Schedule follow-up meeting<br><br><span class="success">●</span> Adopt new CI/CD pipeline</div></div></div></div></section>
+    <section class="mcp-section"><div class="container"><h2>Integrate with AI assistants</h2><p>Use TeamPulse directly in Claude Desktop and other MCP-compatible clients</p><div class="mcp-config"><div class="mcp-config-header"><span class="mcp-config-title">claude_desktop_config.json</span><button class="copy-btn" onclick="copyToClipboard(JSON.stringify({mcpServers:{teampulse:{command:'npx',args:['-y','teampulse','mcp-server'],env:{GEMINI_API_KEY:'your-api-key'}}}},null,2))">Copy</button></div><div class="mcp-config-body"><pre>{
+  "mcpServers": {
+    "teampulse": {
+      "command": "npx",
+      "args": ["-y", "teampulse", "mcp-server"],
+      "env": {
+        "GEMINI_API_KEY": "your-api-key"
+      }
+    }
+  }
+}</pre></div></div></div></section>
+    <section class="features" id="features"><div class="container"><h2>Everything you need</h2><p>Powerful features built for modern teams</p><div class="features-grid"><div class="feature-card"><div class="feature-icon">🤖</div><h3>Multiple AI providers</h3><p>Gemini, Ollama, Anthropic, OpenAI, Mistral. Choose your preferred provider or use fallback.</p></div><div class="feature-card"><div class="feature-icon">⚡</div><h3>Lightning fast</h3><p>Local caching with SHA-256 hashing means you never pay for the same analysis twice.</p></div><div class="feature-card"><div class="feature-icon">🔒</div><h3>Atomic writes</h3><p>Safe memory writes prevent corruption. Your data is always consistent.</p></div><div class="feature-card"><div class="feature-icon">📝</div><h3>Any format</h3><p>.txt, .srt, .vtt - we handle Zoom, Meet, Teams exports automatically.</p></div><div class="feature-card"><div class="feature-icon">🔄</div><h3>Fallback support</h3><p>Primary provider down? Automatically switch to secondary without interruption.</p></div><div class="feature-card"><div class="feature-icon">🔧</div><h3>MCP Server</h3><p>Integrate with AI assistants via Model Context Protocol for seamless workflows.</p></div></div></div></section>
+    <section class="cta-section"><div class="container"><h2>Ready to analyze your meetings?</h2><p>Join teams using TeamPulse for smarter meeting analysis</p><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary btn-large">Get started for free</a></div></section>
+    <footer><div class="container"><div class="footer-content"><div class="footer-left">&copy; 2026 TeamPulse. Open source.</div><div class="footer-links"><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">GitHub</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse#readme" target="_blank">Docs</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">Twitter</a></div></div></div></footer>
+    <script>function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => console.log('Copied to clipboard')).catch(err => console.error('Failed to copy:', err)); }</script>
 </body>
 </html>
