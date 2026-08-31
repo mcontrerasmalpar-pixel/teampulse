@@ -1,17 +1,16 @@
 // @ts-check
-import { test } from 'node:test';
-import { strict as assert } from 'node:assert';
+import { test, expect } from 'vitest';
 import { hashFile } from '../src/utils/cache.js';
 
 test('hashFile: mismo contenido produce mismo hash', async () => {
   const h1 = await hashFile('contenido de prueba');
   const h2 = await hashFile('contenido de prueba');
-  assert.equal(h1, h2);
-  assert.equal(h1.length, 64);
+  expect(h1).toBe(h2);
+  expect(h1.length).toBe(64);
 });
 
 test('hashFile: contenido distinto produce hash distinto', async () => {
   const h1 = await hashFile('contenido A');
   const h2 = await hashFile('contenido B');
-  assert.notEqual(h1, h2);
+  expect(h1).not.toBe(h2);
 });
