@@ -1,0 +1,19 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.mcontrerasmalpar-pixel/teampulse",
+  "title": "TeamPulse",
+  "description": "Analyze meeting transcripts into summary, tasks, risks, and decisions.",
+  "version": "1.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "teampulse",
+      "version": "1.1.0",
+      "runtimeHint": "npx",
+      "transport": { "type": "stdio" },
+      "packageArguments": [
+        { "name": "bin", "value": "teampulse-mcp" }
+      ]
+    }
+  ]
+}

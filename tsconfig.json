@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": [
+    "src/index.js",
+    "src/types.js",
+    "src/mcp/handlers.js",
+    "src/eval/**/*.js",
+    "src/commands/eval.js",
+    "src/utils/schema.js",
+    "src/utils/transcript.js",
+    "src/utils/parseJSON.js",
+    "test/**/*.js"
+  ],
+  "exclude": ["node_modules"]
+}

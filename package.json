@@ -1,6 +1,6 @@
 {
   "name": "teampulse",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "AI-powered CLI for meeting analysis",
   "type": "module",
   "main": "./src/index.js",
@@ -14,12 +14,17 @@
   },
   "files": [
     "src",
+    "evals/dataset.json",
+    "server.json",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "start": "node src/index.js",
-    "test": "node --test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "eval": "node src/index.js eval --provider fixture",
     "mcp-server": "node src/mcp-server.js"
   },
   "engines": {
@@ -41,5 +46,10 @@
     "commander": "^12.1.0",
     "ora": "^8.2.0",
     "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8"
   }
 }

@@ -21,18 +21,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
-      - name: Run tests
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
         run: npm test
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-node-${{ matrix.node-version }}
-          path: test-results/
-          if-no-files-found: ignore
+      - name: Offline evals
+        run: npm run eval
+
+      - name: CLI bin smoke
+        run: node src/index.js --version
