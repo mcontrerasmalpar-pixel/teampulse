@@ -101,8 +101,8 @@
                     }).join('');
                     
                     if (iterations >= this.text.length) clearInterval(interval);
-                    iterations += 1/3;
-                }, 30);
+                    iterations += 1;
+                }, 45);
             }
         }
         
@@ -112,7 +112,7 @@
             scrambleElements.forEach(el => {
                 const text = el.innerText;
                 el.innerText = '';
-                new ScrambleText(el, text);
+                + setTimeout(() => { new ScrambleText(el, text); }, 1000);
             });
         });
     </script>
