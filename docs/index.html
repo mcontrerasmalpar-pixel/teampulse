@@ -1,412 +1,511 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TeamPulse — Meeting Intelligence for the Terminal</title>
-<meta name="description" content="TeamPulse reads your meeting transcripts and pulls out decisions, tasks, and risks — using Gemini, Claude, GPT-4, Mistral, or Ollama. Cloud or fully local." />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" />
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{--bg:#08090d;--glass:rgba(255,255,255,0.04);--glass-2:rgba(255,255,255,0.07);--glass-border:rgba(255,255,255,0.08);--accent:#22d3ee;--accent-2:#67e8f9;--accent-dim:rgba(34,211,238,0.10);--accent-glow:rgba(34,211,238,0.20);--violet:#a78bfa;--violet-dim:rgba(167,139,250,0.10);--text:#f0f4f8;--text-2:#8a9bb0;--text-3:#445566;--green:#34d399;--yellow:#fbbf24;--red:#f87171;--blue:#60a5fa;--font-mono:'JetBrains Mono',monospace;--font-sans:'Inter',sans-serif;--font-display:'Fraunces',Georgia,serif;--radius:12px;--radius-lg:18px;}
-html{scroll-behavior:smooth;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
-body::before,body::after{content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(120px);opacity:.35;}
-body::before{width:600px;height:400px;top:-100px;left:-100px;background:radial-gradient(ellipse,rgba(34,211,238,.18) 0%,transparent 70%);}
-body::after{width:500px;height:400px;bottom:20%;right:-80px;background:radial-gradient(ellipse,rgba(167,139,250,.12) 0%,transparent 70%);}
-*{position:relative;z-index:1;}
-a{color:var(--accent);text-decoration:none;}
-a:hover{color:var(--accent-2);}
-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2.5rem;height:58px;background:rgba(8,9,13,.7);backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid var(--glass-border);}
-.nav-logo{display:flex;align-items:center;gap:.5rem;font-family:var(--font-mono);font-weight:700;font-size:.9rem;color:var(--text);}
-.nav-logo strong{color:var(--accent);}
-.nav-logo-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2.8s ease-in-out infinite;}
-@keyframes blink{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.65);}}
-.nav-links{display:flex;align-items:center;gap:2rem;list-style:none;}
-.nav-links a{color:var(--text-2);font-size:.78rem;font-weight:500;}
-.nav-links a:hover{color:var(--text);}
-.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.1rem;border-radius:var(--radius);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .18s;border:none;text-decoration:none!important;white-space:nowrap;font-family:var(--font-sans);}
-.btn-primary{background:var(--accent);color:#08090d;box-shadow:0 0 20px var(--accent-glow);}
-.btn-primary:hover{background:var(--accent-2);box-shadow:0 0 32px rgba(34,211,238,.4);transform:translateY(-1px);color:#08090d;}
-.btn-ghost{background:var(--glass);border:1px solid var(--glass-border);color:var(--text-2);backdrop-filter:blur(8px);}
-.btn-ghost:hover{background:var(--glass-2);border-color:rgba(255,255,255,.14);color:var(--text);transform:translateY(-1px);}
-.btn-sm{padding:.32rem .8rem;font-size:.75rem;}
-.hero{min-height:90vh;display:grid;grid-template-columns:1fr 1fr;gap:4.5rem;align-items:center;max-width:1200px;margin:0 auto;padding:5rem 2.5rem 3.5rem;}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:.45rem;padding:.28rem .75rem;background:var(--accent-dim);border:1px solid rgba(34,211,238,.2);border-radius:100px;font-size:.67rem;font-weight:700;color:var(--accent);letter-spacing:.9px;text-transform:uppercase;margin-bottom:1.6rem;font-family:var(--font-mono);}
-.hero h1{font-family:var(--font-display);font-size:clamp(2.6rem,5vw,4rem);font-weight:700;line-height:1.05;letter-spacing:-1px;margin-bottom:1.25rem;color:var(--text);}
-.hero h1 em{font-style:italic;background:linear-gradient(120deg,var(--accent) 0%,var(--accent-2) 60%,#a5f3fc 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.hero p{font-size:1rem;color:var(--text-2);line-height:1.75;margin-bottom:1.5rem;max-width:440px;}
-.hero-pills{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:2rem;}
-.hero-pills-label{font-size:.68rem;color:var(--text-3);font-family:var(--font-mono);margin-right:.15rem;}
-.pill{display:inline-flex;align-items:center;gap:.3rem;padding:.18rem .6rem;border-radius:100px;font-size:.65rem;font-weight:600;font-family:var(--font-mono);background:var(--glass);border:1px solid var(--glass-border);color:var(--text-2);}
-.pill.local{background:var(--accent-dim);border-color:rgba(34,211,238,.25);color:var(--accent);}
-.pill-dot{width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.7;}
-.hero-actions{display:flex;gap:.65rem;flex-wrap:wrap;margin-bottom:1.5rem;}
-.hero-meta{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;}
-.hero-meta-item{display:flex;align-items:center;gap:.35rem;font-size:.72rem;color:var(--text-3);font-family:var(--font-mono);}
-.hero-meta-item span:first-child{color:var(--green);}
-.terminal{background:rgba(12,15,24,.85);border:1px solid var(--glass-border);border-radius:var(--radius-lg);overflow:hidden;backdrop-filter:blur(20px);box-shadow:0 30px 80px rgba(0,0,0,.6);}
-.terminal-bar{display:flex;align-items:center;gap:.45rem;padding:.65rem 1rem;background:rgba(255,255,255,.03);border-bottom:1px solid var(--glass-border);}
-.dot{width:10px;height:10px;border-radius:50%;}
-.dot-red{background:#ff5f57;}.dot-yellow{background:#febc2e;}.dot-green{background:#28c840;}
-.terminal-title{flex:1;text-align:center;font-size:.67rem;color:var(--text-3);font-family:var(--font-mono);}
-.tab-bar{display:flex;border-bottom:1px solid var(--glass-border);padding:0 .75rem;background:rgba(255,255,255,.02);overflow-x:auto;}
-.tab{padding:.45rem .85rem;font-size:.67rem;font-family:var(--font-mono);color:var(--text-3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
-.tab.active{color:var(--accent);border-color:var(--accent);}
-.terminal-body{padding:1.1rem 1.4rem;font-family:var(--font-mono);font-size:.73rem;line-height:1.85;overflow-x:auto;color:var(--text);min-height:265px;}
-.tab-panel{display:none;}.tab-panel.active{display:block;}
-.t-prompt{color:var(--accent);}.t-dim{color:var(--text-3);}.t-green{color:var(--green);}.t-yellow{color:var(--yellow);}.t-red{color:var(--red);}.t-blue{color:var(--blue);}.t-teal{color:var(--accent);}.t-violet{color:var(--violet);}.t-bold{font-weight:700;}
-.t-user-line{display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.9rem;}
-.t-user-icon{flex-shrink:0;width:19px;height:19px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:800;color:#08090d;margin-top:1px;}
-.t-think-block{margin:.4rem 0 .4rem 1.6rem;padding:.5rem .9rem;border-left:2px solid var(--glass-border);display:flex;flex-direction:column;gap:.25rem;}
-.t-think{color:var(--text-3);font-style:italic;font-size:.68rem;}
-.t-think-step{color:#3a4f62;font-size:.66rem;}
-.t-exec-block{margin:.5rem 0;background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;padding:.4rem .75rem;display:flex;align-items:center;gap:.45rem;}
-.t-exec-label{color:var(--text-3);font-size:.6rem;text-transform:uppercase;}
-.t-exec-val{color:var(--text-2);font-size:.68rem;}
-.t-answer-block{margin:.45rem 0 0;padding:.7rem .95rem;background:var(--accent-dim);border:1px solid rgba(34,211,238,.18);border-radius:8px;}
-.t-answer-label{font-size:.58rem;color:var(--accent);text-transform:uppercase;margin-bottom:.25rem;font-weight:700;}
-.t-answer-text{color:var(--text-2);font-size:.71rem;line-height:1.65;}
-section{padding:5.5rem 2.5rem;}
-.section-inner{max-width:1200px;margin:0 auto;}
-.section-eyebrow{font-family:var(--font-mono);font-size:.65rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin-bottom:.6rem;}
-.section-title{font-family:var(--font-display);font-size:clamp(1.7rem,3.2vw,2.4rem);font-weight:700;line-height:1.1;margin-bottom:.85rem;color:var(--text);}
-.section-sub{font-size:.95rem;color:var(--text-2);max-width:500px;line-height:1.75;margin-bottom:3rem;}
-.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1px;background:var(--glass-border);border:1px solid var(--glass-border);border-radius:var(--radius-lg);overflow:hidden;}
-.feat-card{background:var(--glass);padding:1.85rem 1.65rem;}
-.feat-card:hover{background:var(--glass-2);}
-.feat-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:.9rem;color:var(--accent);}
-.feat-icon svg{width:20px;height:20px;stroke-width:2;}
-.feat-card h3{font-size:.87rem;font-weight:700;margin-bottom:.4rem;color:var(--text);}
-.feat-card p{font-size:.79rem;color:var(--text-2);line-height:1.65;}
-.local-banner{margin-bottom:2.25rem;padding:.95rem 1.35rem;background:var(--accent-dim);border:1px solid rgba(34,211,238,.18);border-radius:var(--radius-lg);display:flex;align-items:center;gap:.9rem;}
-.local-banner-icon{color:var(--accent);}
-.local-banner-title{font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:.15rem;}
-.local-banner-desc{font-size:.77rem;color:var(--text-2);line-height:1.5;}
-.local-banner code{font-family:var(--font-mono);font-size:.72rem;color:var(--accent-2);background:rgba(34,211,238,.08);padding:.08rem .3rem;border-radius:3px;}
-.providers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1rem;}
-.provider-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:1.65rem;}
-.provider-card:hover{border-color:rgba(255,255,255,.14);background:var(--glass-2);transform:translateY(-3px);}
-.provider-card.featured{border-color:rgba(34,211,238,.3);background:linear-gradient(135deg,var(--glass) 0%,var(--accent-dim) 100%);}
-.provider-card.local-provider{border-color:rgba(167,139,250,.2);background:linear-gradient(135deg,var(--glass) 0%,var(--violet-dim) 100%);}
-.provider-header{display:flex;align-items:center;gap:.7rem;margin-bottom:.8rem;}
-.provider-icon{color:var(--text-2);}
-.provider-icon svg{width:22px;height:22px;stroke-width:2;}
-.provider-name{font-size:.95rem;font-weight:800;color:var(--text);flex:1;}
-.provider-badge{font-family:var(--font-mono);font-size:.58rem;font-weight:700;text-transform:uppercase;padding:.15rem .5rem;border-radius:4px;background:var(--accent);color:#08090d;}
-.provider-badge.local-badge{background:var(--violet-dim);border:1px solid rgba(167,139,250,.35);color:var(--violet);}
-.provider-card p{font-size:.8rem;color:var(--text-2);line-height:1.65;margin-bottom:.9rem;}
-.provider-models{display:flex;flex-wrap:wrap;gap:.35rem;}
-.model-tag{font-family:var(--font-mono);font-size:.63rem;padding:.18rem .55rem;border-radius:4px;background:var(--glass);border:1px solid var(--glass-border);color:var(--text-3);}
-.model-tag.local-tag{background:var(--violet-dim);border-color:rgba(167,139,250,.2);color:var(--violet);}
-.commands-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1px;background:var(--glass-border);border:1px solid var(--glass-border);border-radius:var(--radius-lg);overflow:hidden;}
-.cmd-card{background:var(--glass);overflow:hidden;}
-.cmd-card:hover{background:var(--glass-2);}
-.cmd-card-header{padding:.7rem 1.15rem;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;}
-.cmd-name{font-family:var(--font-mono);font-size:.75rem;font-weight:700;color:var(--accent);}
-.cmd-badge{font-family:var(--font-mono);font-size:.58rem;padding:.12rem .45rem;border-radius:4px;background:var(--glass-2);color:var(--text-3);border:1px solid var(--glass-border);}
-.cmd-badge.local{background:var(--violet-dim);color:var(--violet);border-color:rgba(167,139,250,.25);}
-.cmd-body{padding:.9rem 1.15rem;font-family:var(--font-mono);font-size:.7rem;color:var(--text-2);line-height:1.65;}
-.cmd-example{margin-top:.5rem;padding:.45rem .7rem;background:rgba(0,0,0,.3);border-radius:5px;border:1px solid var(--glass-border);font-size:.67rem;overflow-x:auto;white-space:nowrap;}
-.terminal-demo-wrap{display:grid;grid-template-columns:1fr;gap:2.25rem;}
-.terminal-window{background:rgba(12,15,24,.9);border:1px solid var(--glass-border);border-radius:var(--radius-lg);overflow:hidden;}
-.terminal-titlebar{display:flex;align-items:center;gap:.45rem;padding:.65rem .95rem;background:rgba(255,255,255,.03);border-bottom:1px solid var(--glass-border);}
-.terminal-titlebar-title{flex:1;text-align:center;font-size:.67rem;color:var(--text-3);font-family:var(--font-mono);}
-.terminal-tabs{display:flex;border-bottom:1px solid var(--glass-border);padding:0 .95rem;}
-.terminal-tab{padding:.55rem .85rem;font-size:.7rem;font-weight:600;color:var(--text-3);cursor:pointer;border-bottom:2px solid transparent;}
-.terminal-tab.active{color:var(--accent);border-color:var(--accent);}
-.terminal-body-demo{padding:1.15rem;}
-.terminal-panel{display:none;}.terminal-panel.active{display:block;}
-.demo-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.9rem;}
-.demo-title{font-size:.87rem;font-weight:700;color:var(--text);margin-bottom:.18rem;}
-.demo-meta{font-size:.67rem;color:var(--text-3);font-family:var(--font-mono);}
-.score-badge{display:flex;flex-direction:column;align-items:center;background:var(--accent-dim);border:1px solid rgba(34,211,238,.25);border-radius:8px;padding:.45rem .85rem;}
-.score-num{font-size:1.45rem;font-weight:900;color:var(--accent);line-height:1;}
-.score-lbl{font-size:.55rem;color:var(--accent-2);text-transform:uppercase;font-family:var(--font-mono);}
-.insight-list{display:flex;flex-direction:column;gap:.45rem;}
-.insight-item{display:flex;gap:.6rem;align-items:flex-start;padding:.55rem .7rem;background:var(--glass);border-radius:7px;border:1px solid var(--glass-border);}
-.insight-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px;}
-.insight-dot.decision{background:var(--blue);}
-.insight-dot.task{background:var(--green);}
-.insight-dot.risk{background:var(--yellow);}
-.insight-dot.blocker{background:var(--red);}
-.insight-text{font-size:.75rem;color:var(--text-2);line-height:1.5;}
-.insight-owner{font-size:.64rem;color:var(--text-3);margin-top:.12rem;font-family:var(--font-mono);}
-.terminal-sidebar{padding:1.15rem;background:rgba(255,255,255,.02);border-top:1px solid var(--glass-border);}
-.sidebar-label{font-size:.59rem;font-weight:700;text-transform:uppercase;color:var(--text-3);margin-bottom:.55rem;font-family:var(--font-mono);}
-.sidebar-stat{display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid var(--glass-border);font-size:.75rem;}
-.sidebar-stat:last-child{border-bottom:none;}
-.stat-label{color:var(--text-3);}
-.stat-val{font-weight:700;color:var(--text);font-family:var(--font-mono);font-size:.7rem;}
-.stat-val.ok{color:var(--green);}.stat-val.warn{color:var(--yellow);}.stat-val.bad{color:var(--red);}.stat-val.local{color:var(--accent);}
-.drift-bar{height:4px;border-radius:3px;background:var(--glass-2);overflow:hidden;margin-top:.45rem;}
-.drift-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--yellow));}
-.install-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
-.install-os{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-lg);overflow:hidden;}
-.install-os-header{display:flex;align-items:center;gap:.6rem;padding:.85rem 1.3rem;background:rgba(255,255,255,.03);border-bottom:1px solid var(--glass-border);}
-.install-os-name{font-size:.78rem;font-weight:700;color:var(--text);font-family:var(--font-mono);}
-.install-steps{padding:1.3rem;display:flex;flex-direction:column;gap:1rem;}
-.install-step{display:flex;gap:.9rem;align-items:flex-start;}
-.install-step-num{flex-shrink:0;width:20px;height:20px;border-radius:6px;background:var(--accent);color:#08090d;font-size:.62rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:2px;font-family:var(--font-mono);}
-.install-step-title{font-size:.79rem;font-weight:700;color:var(--text);margin-bottom:.25rem;}
-.install-step-desc{font-size:.73rem;color:var(--text-2);margin-bottom:.45rem;line-height:1.55;}
-.code-block{background:rgba(0,0,0,.35);border:1px solid var(--glass-border);border-radius:6px;padding:.45rem .8rem;display:flex;align-items:center;justify-content:space-between;gap:.45rem;margin-bottom:.35rem;}
-.code-block code{font-family:var(--font-mono);font-size:.67rem;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.copy-btn{flex-shrink:0;background:var(--glass);border:1px solid var(--glass-border);border-radius:4px;padding:.15rem .45rem;font-size:.58rem;color:var(--text-3);cursor:pointer;font-family:var(--font-sans);}
-.copy-btn.copied{color:var(--green);border-color:var(--green);}
-.install-note{padding:.5rem .8rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;font-size:.7rem;color:var(--text-2);line-height:1.5;}
-.install-note strong{color:var(--accent-2);}
-.install-note.local{background:var(--accent-dim);border-color:rgba(34,211,238,.2);}
-.install-note.local strong{color:var(--accent);}
-.cta-section{text-align:center;padding:6.5rem 2.5rem;position:relative;overflow:hidden;}
-.cta-title{font-family:var(--font-display);font-size:clamp(1.9rem,4.5vw,3.2rem);font-weight:700;line-height:1.08;margin-bottom:1.1rem;color:var(--text);}
-.cta-sub{font-size:.95rem;color:var(--text-2);margin:0 auto 2.25rem;max-width:440px;line-height:1.75;}
-.cta-actions{display:flex;gap:.65rem;justify-content:center;flex-wrap:wrap;}
-footer{background:rgba(8,9,13,.8);border-top:1px solid var(--glass-border);padding:1.75rem 2.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
-.footer-logo{font-family:var(--font-mono);font-weight:700;font-size:.82rem;color:var(--text-2);}
-.footer-logo strong{color:var(--accent);}
-.footer-links{display:flex;gap:1.4rem;}
-.footer-links a{font-size:.74rem;color:var(--text-3);}
-footer p{font-size:.72rem;color:var(--text-3);}
-@media (max-width:900px){.hero{grid-template-columns:1fr;min-height:auto;gap:2.5rem;padding-top:3rem;}.terminal-demo-wrap{grid-template-columns:1fr;}.install-grid{grid-template-columns:1fr;}.hero h1{font-size:2.4rem;}}
-@media (max-width:640px){nav{padding:0 1.25rem;}section{padding:3.5rem 1.25rem;}.nav-links{display:none;}.hero{padding:2.5rem 1.25rem 2rem;}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeamPulse - AI-powered meeting analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1a1;
+            --text-tertiary: #666666;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border: #222222;
+            --gradient-1: #3b82f6;
+            --gradient-2: #8b5cf6;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Navbar */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 64px;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .btn-primary {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 160px 0 100px;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero h1 {
+            font-size: 64px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, var(--gradient-1), var(--gradient-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 40px;
+            line-height: 1.7;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-bottom: 60px;
+        }
+
+        .btn-large {
+            padding: 14px 32px;
+            font-size: 16px;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 14px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+            display: inline-block;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--text-tertiary);
+        }
+
+        /* Terminal */
+        .terminal-section {
+            padding: 80px 0;
+        }
+
+        .terminal-window {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .terminal-header {
+            background: var(--bg-tertiary);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--text-tertiary);
+        }
+
+        .terminal-dot.red { background: #ff5f56; border: none; }
+        .terminal-dot.yellow { background: #ffbd2e; border: none; }
+        .terminal-dot.green { background: #27c93f; border: none; }
+
+        .terminal-body {
+            padding: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        .command {
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .command .prompt {
+            color: var(--accent);
+            margin-right: 8px;
+        }
+
+        .output {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .output .success {
+            color: #27c93f;
+        }
+
+        .output .task-high {
+            color: #ff5f56;
+        }
+
+        .output .task-medium {
+            color: #ffbd2e;
+        }
+
+        .output .task-low {
+            color: #27c93f;
+        }
+
+        /* Features */
+        .features {
+            padding: 120px 0;
+            background: var(--bg-secondary);
+        }
+
+        .features h2 {
+            font-size: 40px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .features p {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 18px;
+            margin-bottom: 80px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            padding: 32px;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--text-tertiary);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            text-align: left;
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* CTA */
+        .cta-section {
+            padding: 120px 0;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            font-size: 40px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .cta-section p {
+            color: var(--text-secondary);
+            font-size: 18px;
+            margin-bottom: 40px;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 60px 0;
+            background: var(--bg-secondary);
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-left {
+            color: var(--text-tertiary);
+            font-size: 14px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--text-primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 40px;
+            }
+
+            .hero p {
+                font-size: 16px;
+            }
+
+            .hero-cta {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .features h2 {
+                font-size: 32px;
+            }
+
+            .terminal-body {
+                font-size: 12px;
+                padding: 16px;
+            }
+        }
+    </style>
 </head>
 <body>
-<nav>
-<div class="nav-logo"><div class="nav-logo-dot"></div><span><strong>Team</strong>Pulse</span></div>
-<ul class="nav-links"><li><a href="#features">Features</a></li><li><a href="#providers">Providers</a></li><li><a href="#commands">CLI</a></li><li><a href="#demo">Demo</a></li><li><a href="#install">Install</a></li></ul>
-<a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-ghost btn-sm" target="_blank" rel="noopener noreferrer">
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-GitHub</a>
-</nav>
-<section style="padding:0">
-<div class="hero">
-<div class="hero-left">
-<h1>Your meetings,<br>without the <em>noise</em>.</h1>
-<div class="hero-eyebrow">v0.2.0 · 5 providers · cloud + local</div>
-<p>Drop in a transcript. Get back decisions, tasks, and blockers — with owners, confidence scores, and drift tracking. Works with the AI you already use, or runs fully offline.</p>
-<div class="hero-pills">
-<span class="hero-pills-label">works with</span>
-<span class="pill"><span class="pill-dot"></span>Gemini</span>
-<span class="pill"><span class="pill-dot"></span>Claude</span>
-<span class="pill"><span class="pill-dot"></span>GPT-4</span>
-<span class="pill local"><span class="pill-dot"></span>Mistral</span>
-<span class="pill local"><span class="pill-dot"></span>Ollama</span>
-</div>
-<div class="hero-actions">
-<a href="#install" class="btn btn-primary">→ Get started</a>
-<a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-ghost" target="_blank" rel="noopener noreferrer">View source</a>
-</div>
-<div class="hero-meta">
-<div class="hero-meta-item"><span>●</span><span>Runs locally</span></div>
-<div class="hero-meta-item"><span>●</span><span>No cloud needed</span></div>
-<div class="hero-meta-item"><span>●</span><span>Node.js 18+</span></div>
-</div>
-</div>
-<div class="hero-right">
-<div class="terminal">
-<div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="terminal-title">teampulse — zsh</span></div>
-<div class="tab-bar">
-<div class="tab active" data-target="tab-ai">AI Reasoning</div>
-<div class="tab" data-target="tab-analyze">analyze</div>
-<div class="tab" data-target="tab-local">--local</div>
-<div class="tab" data-target="tab-batch">batch</div>
-</div>
-<div class="terminal-body">
-<div class="tab-panel active" id="tab-ai">
-<div class="t-user-line"><div class="t-user-icon">M</div><span>what got decided this week?</span></div>
-<div class="t-think-block"><span class="t-think">thinking…</span><div class="t-think-step">scanning 4 transcripts Mon–Fri</div><div class="t-think-step">filtering decisions, confidence ≥ 0.82</div><div class="t-think-step">matching owners and deadlines</div></div>
-<div class="t-exec-block"><span class="t-exec-label">tool</span><span class="t-exec-val">analyze_transcripts(since="monday", type="decisions")</span></div>
-<div class="t-answer-block"><div class="t-answer-label">Found</div><div class="t-answer-text"><span class="t-green t-bold">3 decisions</span> across 4 meetings:<br>› <span class="t-blue">Mon</span> — Migrate auth to Clerk <span class="t-dim">(→ @sara)</span><br>› <span class="t-blue">Wed</span> — Freeze scope for v1.2 <span class="t-dim">(→ @team)</span><br>› <span class="t-blue">Fri</span> — Deploy to staging EOD <span class="t-dim">(→ @carlos)</span></div></div>
-</div>
-<div class="tab-panel" id="tab-analyze">
-<div><span class="t-prompt">❯</span> teampulse analyze standup-2026-05-23.txt --provider claude</div>
-<div class="t-dim" style="margin:.35rem 0 .7rem 1rem">analyzing with claude-3-5-sonnet…</div>
-<div><span class="t-green t-bold">✓</span> <span class="t-bold">3 decisions</span> · <span class="t-bold">5 tasks</span> · <span class="t-bold">2 risks</span></div><br>
-<div class="t-teal t-bold">DECISIONS</div><div class="t-dim">───────────────────────────────────</div>
-<div>› Migrate auth to Clerk <span class="t-dim">[sara] [high]</span></div>
-<div>› Freeze scope for v1.2 <span class="t-dim">[team] [confirmed]</span></div><br>
-<div class="t-yellow t-bold">TASKS</div><div class="t-dim">───────────────────────────────────</div>
-<div>› Update onboarding copy <span class="t-dim">[carlos] [due fri]</span></div>
-<div>› Write migration script <span class="t-dim">[sara] [due mon]</span></div><br>
-<div class="t-red t-bold">RISKS</div><div class="t-dim">───────────────────────────────────</div>
-<div>› API rate limits on free tier <span class="t-dim">[unresolved]</span></div>
-</div>
-<div class="tab-panel" id="tab-local">
-<div><span class="t-prompt">❯</span> teampulse analyze meeting.txt <span class="t-teal">--provider ollama --model mistral</span></div>
-<div class="t-dim" style="margin:.3rem 0 .65rem 1rem">running locally · mistral:latest · no API key</div>
-<div class="t-teal">● offline · nothing leaves your machine</div><br>
-<div><span class="t-green t-bold">✓</span> <span class="t-bold">2 decisions</span> · <span class="t-bold">4 tasks</span> · <span class="t-bold">1 risk</span></div><br>
-<div class="t-teal t-bold">AVAILABLE LOCAL MODELS</div><div class="t-dim">───────────────────────────────────</div>
-<div>› <span class="t-teal">ollama</span>   --model mistral / llama3 / phi3 / gemma2</div>
-<div>› <span class="t-violet">mistral</span>  API · mistral-large / mixtral-8x7b</div><br>
-<div class="t-dim">tip: <span class="t-teal">ollama pull mistral</span> to get started</div>
-</div>
-<div class="tab-panel" id="tab-batch">
-<div><span class="t-prompt">❯</span> teampulse batch ./meetings/ --since 2026-05-01 --filter risk</div>
-<div class="t-dim" style="margin:.3rem 0 .65rem 1rem">processing 7 files…</div>
-<div><span class="t-green">✓</span> sprint-planning.txt</div>
-<div><span class="t-green">✓</span> design-review.txt</div>
-<div><span class="t-green">✓</span> backend-sync.txt</div>
-<div class="t-dim">  · · ·</div><br>
-<div class="t-red t-bold">RISKS · 7 meetings</div><div class="t-dim">───────────────────────────────────</div>
-<div>› API rate limits <span class="t-dim">[3×]</span></div>
-<div>› Auth migration timeline <span class="t-dim">[2×]</span></div>
-<div>› Staging env unstable <span class="t-dim">[2×]</span></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
-<section id="features">
-<div class="section-inner">
-<p class="section-eyebrow">Features</p>
-<h2 class="section-title">Less noise, more signal</h2>
-<p class="section-sub">The stuff that usually falls through the cracks — pulled out automatically, every time.</p>
-<div class="features-grid">
-<div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4-4-4 4"/><path d="M12 16V8"/></svg></div><h3>Decisions</h3><p>Every decision tagged with owner and confidence. No more "wait, what did we agree on?"</p></div>
-<div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><h3>Tasks</h3><p>Action items extracted from context, not just explicit assignments. Deadlines flagged when missing.</p></div>
-<div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div><h3>Risks &amp; blockers</h3><p>Surfaces problems early — even when nobody in the meeting called them out directly.</p></div>
-<div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></div><h3>Drift tracking</h3><p>Compares meetings over time. Spots the same topic coming back, unresolved.</p></div>
-<div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><h3>Fully local</h3><p>Run everything offline with Ollama. No API key, no usage limits, no data leaving your machine.</p></div>
-<div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div><h3>Batch mode</h3><p>Process a whole month of meetings at once with <code>--since</code>, <code>--filter</code>, and <code>--title</code>.</p></div>
-</div>
-</div>
-</section>
-<section id="providers">
-<div class="section-inner">
-<p class="section-eyebrow">AI Providers</p>
-<h2 class="section-title">Pick a provider. Keep moving.</h2>
-<p class="section-sub">One flag to switch. No config changes, no rewrite. Cloud when you want speed, local when you need privacy.</p>
-<div class="local-banner">
-<div class="local-banner-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-<div><div class="local-banner-title">New in v0.2.0 — local providers</div><div class="local-banner-desc">Use <code>--provider ollama</code> to run 100% offline. No API key needed — just <code>ollama pull mistral</code> and you're ready. Or use <code>--provider mistral</code> for the Mistral cloud API.</div></div>
-</div>
-<div class="providers-grid">
-<div class="provider-card featured"><div class="provider-header"><div class="provider-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12 2.1 12.1"/><path d="m12 12 5.3 8.7"/></svg></div><span class="provider-name">Google Gemini</span><span class="provider-badge">Default</span></div><p>Fast and reliable for long transcripts. Gemini 2.0 Flash handles a full hour of meeting in one shot.</p><div class="provider-models"><span class="model-tag">gemini-2.0-flash</span><span class="model-tag">gemini-1.5-pro</span><span class="model-tag">gemini-1.5-flash</span></div></div>
-<div class="provider-card"><div class="provider-header"><div class="provider-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h10"/></svg></div><span class="provider-name">Anthropic Claude</span></div><p>Better reasoning on complex meetings with lots of speakers, back-and-forth, and implicit context.</p><div class="provider-models"><span class="model-tag">claude-3-5-sonnet</span><span class="model-tag">claude-3-haiku</span><span class="model-tag">claude-3-opus</span></div></div>
-<div class="provider-card"><div class="provider-header"><div class="provider-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><span class="provider-name">OpenAI GPT-4</span></div><p>Consistent, well-structured output. GPT-4o is solid if you're already in the OpenAI ecosystem.</p><div class="provider-models"><span class="model-tag">gpt-4o</span><span class="model-tag">gpt-4o-mini</span><span class="model-tag">gpt-4-turbo</span></div></div>
-<div class="provider-card local-provider"><div class="provider-header"><div class="provider-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m8 18 4 4 4-4"/><path d="M8 6 12 2l4 4"/></svg></div><span class="provider-name">Mistral AI</span><span class="provider-badge local-badge">Local-first</span></div><p>Open-weight and fast. Run via the Mistral API, or use any Mistral model through Ollama without a key.</p><div class="provider-models"><span class="model-tag local-tag">mistral-large</span><span class="model-tag local-tag">mixtral-8x7b</span><span class="model-tag local-tag">mistral-7b</span></div></div>
-<div class="provider-card local-provider"><div class="provider-header"><div class="provider-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div><span class="provider-name">Ollama</span><span class="provider-badge local-badge">100% Offline</span></div><p>Runs entirely on your hardware. No API key, no internet, no data leaving the machine. Ideal for anything sensitive.</p><div class="provider-models"><span class="model-tag local-tag">mistral</span><span class="model-tag local-tag">llama3</span><span class="model-tag local-tag">phi3</span><span class="model-tag local-tag">gemma2</span><span class="model-tag local-tag">qwen2</span></div></div>
-</div>
-</div>
-</section>
-<section id="commands">
-<div class="section-inner">
-<p class="section-eyebrow">CLI Reference</p>
-<h2 class="section-title">Built for real workflows</h2>
-<p class="section-sub">Pipe it, script it, automate it. Everything you need, nothing you don't.</p>
-<div class="commands-grid">
-<div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">teampulse analyze</span><span class="cmd-badge">single file</span></div><div class="cmd-body">Analyze one transcript. Prints decisions, tasks, and risks.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze meeting.txt</div></div></div>
-<div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--provider</span><span class="cmd-badge">AI model</span></div><div class="cmd-body">Switch provider on the fly — no config edits. gemini · claude · openai · mistral · ollama.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze m.txt --provider mistral</div></div></div>
-<div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--provider ollama</span><span class="cmd-badge local">offline</span></div><div class="cmd-body">Fully local. No key needed. Use <code>--model</code> to pick which Ollama model to use.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze m.txt --provider ollama --model llama3</div></div></div>
-<div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--watch</span><span class="cmd-badge">live</span></div><div class="cmd-body">Monitor a folder. Analyzes each new transcript as it appears.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse analyze --watch ./meetings/</div></div></div>
-<div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">batch + --since</span><span class="cmd-badge">date filter</span></div><div class="cmd-body">Process everything since a date. Useful for weekly or monthly reviews.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse batch ./ --since 2026-05-01</div></div></div>
-<div class="cmd-card"><div class="cmd-card-header"><span class="cmd-name">--filter</span><span class="cmd-badge">type</span></div><div class="cmd-body">Narrow down to one insight type: risk · task · decision.<div class="cmd-example"><span class="t-prompt">❯</span> teampulse batch ./ --filter risk</div></div></div>
-</div>
-</div>
-</section>
-<section id="demo">
-<div class="section-inner">
-<p class="section-eyebrow">Terminal Demo</p>
-<h2 class="section-title">See what comes out</h2>
-<p class="section-sub">Preview of the analysis output — structured decisions, tasks, and risks with owners and confidence scores.</p>
-<div class="terminal-demo-wrap">
-<div class="terminal-window">
-<div class="terminal-titlebar"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div><span class="terminal-titlebar-title">TeamPulse — Terminal Output</span></div>
-<div class="terminal-tabs">
-<div class="terminal-tab active" data-target="terminal-tab-insights">Insights</div>
-<div class="terminal-tab" data-target="terminal-tab-tasks">Tasks</div>
-<div class="terminal-tab" data-target="terminal-tab-drift">Drift</div>
-</div>
-<div class="terminal-body-demo">
-<div class="terminal-panel active" id="terminal-tab-insights">
-<div class="demo-header"><div><div class="demo-title">Sprint Planning — May 22</div><div class="demo-meta">47 min · 5 people · ollama/mistral</div></div><div class="score-badge"><span class="score-num">84</span><span class="score-lbl">Score</span></div></div>
-<div class="insight-list">
-<div class="insight-item"><div class="insight-dot decision"></div><div><div class="insight-text">Migrate auth to Clerk before v1.2 launch</div><div class="insight-owner">@sara · high confidence</div></div></div>
-<div class="insight-item"><div class="insight-dot task"></div><div><div class="insight-text">Update onboarding copy and illustrations</div><div class="insight-owner">@carlos · due Friday</div></div></div>
-<div class="insight-item"><div class="insight-dot risk"></div><div><div class="insight-text">API rate limits may block the testing pipeline</div><div class="insight-owner">unresolved · flagged</div></div></div>
-<div class="insight-item"><div class="insight-dot blocker"></div><div><div class="insight-text">Staging is down — QA blocked until Thursday</div><div class="insight-owner">@devops · critical</div></div></div>
-</div>
-</div>
-<div class="terminal-panel" id="terminal-tab-tasks">
-<div class="insight-list">
-<div class="insight-item"><div class="insight-dot task"></div><div><div class="insight-text">Write the auth migration script</div><div class="insight-owner">@sara · due Monday</div></div></div>
-<div class="insight-item"><div class="insight-dot task"></div><div><div class="insight-text">QA staging once it's back up</div><div class="insight-owner">@team · due Thursday</div></div></div>
-<div class="insight-item"><div class="insight-dot task"></div><div><div class="insight-text">Deploy to production Friday EOD</div><div class="insight-owner">@carlos · due Friday</div></div></div>
-</div>
-</div>
-<div class="terminal-panel" id="terminal-tab-drift">
-<div class="insight-list">
-<div class="insight-item"><div class="insight-dot risk"></div><div><div class="insight-text">API rate limits — came up in 3 meetings in a row</div><div class="insight-owner">drift detected · still open</div></div></div>
-<div class="insight-item"><div class="insight-dot decision"></div><div><div class="insight-text">Auth migration re-discussed — owner changed since last sprint</div><div class="insight-owner">2 meetings · possible confusion</div></div></div>
-</div>
-</div>
-</div>
-<div class="terminal-sidebar">
-<div class="sidebar-label">Stats</div>
-<div class="sidebar-stat"><span class="stat-label">Decisions</span><span class="stat-val ok">3</span></div>
-<div class="sidebar-stat"><span class="stat-label">Tasks</span><span class="stat-val ok">5</span></div>
-<div class="sidebar-stat"><span class="stat-label">Risks</span><span class="stat-val warn">2</span></div>
-<div class="sidebar-stat"><span class="stat-label">Blockers</span><span class="stat-val bad">1</span></div>
-<div class="sidebar-stat"><span class="stat-label">Provider</span><span class="stat-val local">ollama/mistral</span></div>
-<div class="sidebar-stat"><span class="stat-label">Latency</span><span class="stat-val ok">2.1s</span></div>
-<div style="margin-top:.7rem"><div class="sidebar-label">Drift</div><div class="drift-bar"><div class="drift-fill" style="width:62%"></div></div><div style="font-size:.63rem;color:var(--text-3);margin-top:.28rem;font-family:var(--font-mono)">62% · moderate vs last sprint</div></div>
-</div>
-</div>
-</div>
-</div>
-</section>
-<section id="install">
-<div class="section-inner">
-<p class="section-eyebrow">Installation</p>
-<h2 class="section-title">Up in two minutes</h2>
-<p class="section-sub">Node.js 18+ is all you need to start. Ollama is optional, but worth it.</p>
-<div class="install-grid">
-<div class="install-os"><div class="install-os-header"><span class="install-os-name">macOS &amp; Linux</span></div>
-<div class="install-steps">
-<div class="install-step"><div class="install-step-num">1</div><div><div class="install-step-title">Check Node.js</div><div class="install-step-desc">You need v18 or higher.</div><div class="code-block"><code>node --version</code><button class="copy-btn" onclick="copyCode(this,'node --version')">Copy</button></div></div></div>
-<div class="install-step"><div class="install-step-num">2</div><div><div class="install-step-title">Clone &amp; install</div><div class="install-step-desc">Get the repo and install dependencies.</div><div class="code-block"><code>git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git</code><button class="copy-btn" onclick="copyCode(this,'git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git')">Copy</button></div><div class="code-block"><code>cd teampulse &amp;&amp; npm install</code><button class="copy-btn" onclick="copyCode(this,'cd teampulse && npm install')">Copy</button></div></div></div>
-<div class="install-step"><div class="install-step-num">3</div><div><div class="install-step-title">Add your API key</div><div class="install-step-desc">Copy the env file and fill in whichever key you want to use.</div><div class="code-block"><code>cp .env.example .env</code><button class="copy-btn" onclick="copyCode(this,'cp .env.example .env')">Copy</button></div><div class="install-note">Set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, <strong>OPENAI_API_KEY</strong>, or <strong>MISTRAL_API_KEY</strong></div></div></div>
-<div class="install-step"><div class="install-step-num">4</div><div><div class="install-step-title">Optional: Ollama</div><div class="install-step-desc">If you want to run fully offline, no API key needed.</div><div class="code-block"><code>brew install ollama</code><button class="copy-btn" onclick="copyCode(this,'brew install ollama')">Copy</button></div><div class="code-block"><code>ollama pull mistral</code><button class="copy-btn" onclick="copyCode(this,'ollama pull mistral')">Copy</button></div><div class="install-note local"><strong>Once pulled, works completely offline</strong></div></div></div>
-<div class="install-step"><div class="install-step-num">5</div><div><div class="install-step-title">Link and run</div><div class="install-step-desc">Make it available globally and run your first analysis.</div><div class="code-block"><code>npm link</code><button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button></div><div class="code-block"><code>teampulse analyze data/sample.txt</code><button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt')">Copy</button></div></div></div>
-</div>
-</div>
-<div class="install-os"><div class="install-os-header"><span class="install-os-name">Windows (PowerShell)</span></div>
-<div class="install-steps">
-<div class="install-step"><div class="install-step-num">1</div><div><div class="install-step-title">Check Node.js</div><div class="install-step-desc">Open PowerShell and verify your version.</div><div class="code-block"><code>node --version</code><button class="copy-btn" onclick="copyCode(this,'node --version')">Copy</button></div></div></div>
-<div class="install-step"><div class="install-step-num">2</div><div><div class="install-step-title">Clone &amp; install</div><div class="install-step-desc">Get the repo and install dependencies.</div><div class="code-block"><code>git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git</code><button class="copy-btn" onclick="copyCode(this,'git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git')">Copy</button></div><div class="code-block"><code>cd teampulse; npm install</code><button class="copy-btn" onclick="copyCode(this,'cd teampulse; npm install')">Copy</button></div></div></div>
-<div class="install-step"><div class="install-step-num">3</div><div><div class="install-step-title">Add your API key</div><div class="install-step-desc">Copy the env file and fill in your key.</div><div class="code-block"><code>Copy-Item .env.example .env</code><button class="copy-btn" onclick="copyCode(this,'Copy-Item .env.example .env')">Copy</button></div><div class="install-note">Set <strong>GEMINI_API_KEY</strong>, <strong>ANTHROPIC_API_KEY</strong>, <strong>OPENAI_API_KEY</strong>, or <strong>MISTRAL_API_KEY</strong></div></div></div>
-<div class="install-step"><div class="install-step-num">4</div><div><div class="install-step-title">Optional: Ollama</div><div class="install-step-desc">Download from <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">ollama.com</a> and pull a model.</div><div class="code-block"><code>ollama pull mistral</code><button class="copy-btn" onclick="copyCode(this,'ollama pull mistral')">Copy</button></div><div class="install-note local"><strong>Once pulled, works completely offline</strong></div></div></div>
-<div class="install-step"><div class="install-step-num">5</div><div><div class="install-step-title">Link and run</div><div class="install-step-desc">Make it available globally and run your first analysis.</div><div class="code-block"><code>npm link</code><button class="copy-btn" onclick="copyCode(this,'npm link')">Copy</button></div><div class="code-block"><code>teampulse analyze data/sample.txt</code><button class="copy-btn" onclick="copyCode(this,'teampulse analyze data/sample.txt')">Copy</button></div></div></div>
-</div>
-</div>
-</div>
-</div>
-</section>
-<div class="cta-section">
-<h2 class="cta-title">Less re-discussing.<br>More shipping.</h2>
-<p class="cta-sub">TeamPulse keeps decisions, tasks, and blockers in check — across every meeting, every week. Cloud or local, your call.</p>
-<div class="cta-actions">
-<a href="#install" class="btn btn-primary">→ Install TeamPulse</a>
-<a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn btn-ghost" target="_blank" rel="noopener noreferrer">
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-View on GitHub</a>
-</div>
-</div>
-<footer>
-<span class="footer-logo"><strong>Team</strong>Pulse</span>
-<div class="footer-links"><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank" rel="noopener noreferrer">GitHub</a><a href="#features">Features</a><a href="#providers">Providers</a><a href="#install">Install</a></div>
-<p>Built for async teams · v0.2.0 · 5 providers</p>
-</footer>
-<script>
-document.querySelectorAll('.tab-bar .tab').forEach(function(tab){tab.addEventListener('click',function(){var bar=tab.closest('.tab-bar');var body=bar.nextElementSibling;bar.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});body.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});tab.classList.add('active');var target=body.querySelector('#'+tab.dataset.target);if(target)target.classList.add('active');});});
-document.querySelectorAll('.terminal-tabs .terminal-tab').forEach(function(tab){tab.addEventListener('click',function(){var tabs=tab.closest('.terminal-tabs');var body=tabs.nextElementSibling;tabs.querySelectorAll('.terminal-tab').forEach(function(t){t.classList.remove('active');});body.querySelectorAll('.terminal-panel').forEach(function(p){p.classList.remove('active');});tab.classList.add('active');var target=body.querySelector('#'+tab.dataset.target);if(target)target.classList.add('active');});});
-function copyCode(btn,text){navigator.clipboard.writeText(text).then(function(){btn.textContent='Copied!';btn.classList.add('copied');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied');},1800);});}
-</script>
+    <!-- Navbar -->
+    <nav>
+        <div class="container">
+            <a href="#" class="logo">TeamPulse</a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#docs">Docs</a>
+                <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">GitHub</a>
+                <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container">
+            <h1>AI-powered meeting<br><span>analysis for teams</span></h1>
+            <p>Extract summaries, tasks, risks, and decisions from your meeting transcripts automatically. Supports Zoom, Meet, Teams exports.</p>
+            <div class="hero-cta">
+                <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary btn-large">Start for free</a>
+                <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-secondary btn-large">View on GitHub</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Terminal -->
+    <section class="terminal-section">
+        <div class="container">
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <div class="terminal-dot red"></div>
+                    <div class="terminal-dot yellow"></div>
+                    <div class="terminal-dot green"></div>
+                </div>
+                <div class="terminal-body">
+                    <div class="command">
+                        <span class="prompt">$</span>npm install -g teampulse
+                    </div>
+                    <div class="command">
+                        <span class="prompt">$</span>teampulse analyze meeting.txt
+                    </div>
+                    <div class="output">
+                        <span class="success">✓</span> Analysis complete<br><br>
+                        <span class="success">Summary:</span> Team sync to discuss Q3 roadmap and blockers.<br><br>
+                        <span class="task-high">●</span> Fix production bug (@alice)<br>
+                        <span class="task-medium">●</span> Update documentation (@bob)<br>
+                        <span class="task-low">●</span> Schedule follow-up meeting<br><br>
+                        <span class="success">●</span> Adopt new CI/CD pipeline
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2>Everything you need</h2>
+            <p>Powerful features built for modern teams</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Multiple AI providers</h3>
+                    <p>Gemini, Ollama, Anthropic, OpenAI, Mistral. Choose your preferred provider or use fallback.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning fast</h3>
+                    <p>Local caching with SHA-256 hashing means you never pay for the same analysis twice.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Atomic writes</h3>
+                    <p>Safe memory writes prevent corruption. Your data is always consistent.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📝</div>
+                    <h3>Any format</h3>
+                    <p>.txt, .srt, .vtt - we handle Zoom, Meet, Teams exports automatically.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Fallback support</h3>
+                    <p>Primary provider down? Automatically switch to secondary without interruption.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔧</div>
+                    <h3>MCP Server</h3>
+                    <p>Integrate with AI assistants via Model Context Protocol for seamless workflows.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to analyze your meetings?</h2>
+            <p>Join teams using TeamPulse for smarter meeting analysis</p>
+            <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary btn-large">Get started for free</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-left">
+                    © 2026 TeamPulse. Open source.
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">GitHub</a>
+                    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">Docs</a>
+                    <a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">Twitter</a>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
