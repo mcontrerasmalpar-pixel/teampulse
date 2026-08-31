@@ -5,7 +5,7 @@
 
 CLI con IA para analizar reuniones. Extrae resumen, tareas, riesgos y decisiones de transcripciones (`.txt`, `.srt`, `.vtt`) usando Gemini, Ollama, Anthropic, OpenAI o Mistral.
 
-**v1.0.1** · Node.js >= 18 · MIT
+**v1.1.0** · Node.js >= 18 · MIT
 
 ```bash
 npx teampulse analyze meeting.txt
@@ -18,6 +18,7 @@ npm i -g teampulse
 - [Configuración](#configuración)
 - [Uso CLI](#uso-cli)
 - [Servidor MCP](#servidor-mcp)
+- [Cursor](#cursor)
 - [Formatos](#formatos)
 - [Salida](#salida)
 - [Arquitectura](#arquitectura)
@@ -45,7 +46,7 @@ Bins publicados:
 
 | Comando | Qué hace |
 | --- | --- |
-| `teampulse` | CLI (`analyze`, `batch`, `mcp`) |
+| `teampulse` | CLI (`analyze`, `batch`, `eval`, `mcp`) |
 | `teampulse-mcp` | Servidor MCP por stdio |
 
 ## Configuración
@@ -97,6 +98,12 @@ teampulse batch ./meetings --concurrency 3
 teampulse batch ./meetings --provider gemini --fallback-provider ollama
 ```
 
+### Eval (sin APIs de pago)
+
+```bash
+teampulse eval --provider fixture
+```
+
 ## Servidor MCP
 
 No uses una ruta absoluta a `src/mcp-server.js`. Arranca el bin publicado:
@@ -107,25 +114,61 @@ npx teampulse mcp
 npx teampulse-mcp
 ```
 
-### Claude Desktop
+### Cursor
 
-En `claude_desktop_config.json`:
+Este repo incluye [`.cursor/mcp.json`](.cursor/mcp.json). Al abrir el proyecto en Cursor, TeamPulse queda como servidor MCP.
+
+Guía completa: [docs/CURSOR.md](docs/CURSOR.md).
+
+**Settings → Tools & MCP → New MCP Server**, o este bloque en `.cursor/mcp.json` (proyecto) o `~/.cursor/mcp.json` (todos los workspaces):
 
 ```json
 {
   "mcpServers": {
     "teampulse": {
       "command": "npx",
-      "args": ["-y", "teampulse", "mcp"],
+      "args": ["-y", "teampulse-mcp"],
       "env": {
-        "GEMINI_API_KEY": "your-api-key"
+        "GEMINI_API_KEY": "${env:GEMINI_API_KEY}"
       }
     }
   }
 }
 ```
 
-Equivalente con el bin dedicado:
+`${env:GEMINI_API_KEY}` toma la variable de tu entorno. No subas la API key al git.
+
+1. Publica o instala el paquete que incluye el bin (`npm i -g teampulse` / `npx teampulse-mcp`).
+2. Exporta `GEMINI_API_KEY` (u otra key) en el entorno.
+3. Reinicia Cursor por completo (quit, no solo reload).
+4. En **Tools & MCP** debe aparecer `teampulse` con tools activas.
+
+En Agent:
+
+- “Usa `get_meeting_history` con limit 5”
+- “Llama `analyze_meeting` con provider `fixture` y esta transcripción: `TASK: Write tests | owner=maria | priority=high`”
+
+Si `npx teampulse-mcp` aún no resuelve (versión no publicada), solo en local:
+
+```json
+{
+  "mcpServers": {
+    "teampulse": {
+      "command": "node",
+      "args": ["${workspaceFolder}/src/mcp-server.js"],
+      "env": {
+        "GEMINI_API_KEY": "${env:GEMINI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Vuelve a `npx -y teampulse-mcp` cuando 1.1.0 esté en npm.
+
+### Claude Desktop
+
+En `claude_desktop_config.json`:
 
 ```json
 {
@@ -152,8 +195,9 @@ Equivalente con el bin dedicado:
 | `provider` | no | proveedor de IA |
 | `fallbackProvider` | no | proveedor de respaldo |
 | `useCache` | no | cache local (default `true`) |
+| `timeoutMs` | no | timeout del tool |
 
-**`get_meeting_history`** — historial en `~/.teampulse/memory.json`.
+**`get_meeting_history`** — historial en `~/.teampulse/memory.json` (`readOnlyHint: true`).
 
 | Param | Requerido | Descripción |
 | --- | --- | --- |
@@ -253,20 +297,15 @@ Módulos:
 
 - `src/index.js` — CLI (`teampulse`)
 - `src/mcp-server.js` — MCP (`teampulse-mcp`)
-- `src/commands/analyze.js` / `batch.js`
+- `src/commands/analyze.js` / `batch.js` / `eval.js`
 - `src/services/provider.js`
 - `src/utils/{transcript,cache,memory,parseJSON,schema}.js`
 
 ## Tests
 
-Hay **3** archivos de test (no hay una suite de “10+”):
-
-- `test/parseJSON.test.js` — JSON directo, fenced y envuelto en prosa
-- `test/transcript.test.js` — limpieza de timestamps SRT/VTT
-- `test/cache.test.js` — consistencia del hash SHA-256
-
 ```bash
 npm test
+npm run eval
 ```
 
 ## Contribuir
