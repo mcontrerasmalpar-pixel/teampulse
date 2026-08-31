@@ -1,7 +1,7 @@
 // @ts-check
 import { z } from 'zod';
 
-const TaskSchema = z.object({
+export const TaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().default(''),
   priority: z.enum(['high', 'medium', 'low']).default('medium'),
@@ -9,17 +9,17 @@ const TaskSchema = z.object({
   dueDate: z.string().nullable().default(null),
 });
 
-const RiskSchema = z.object({
+export const RiskSchema = z.object({
   title: z.string().min(1),
   description: z.string().default(''),
 });
 
-const DecisionSchema = z.object({
+export const DecisionSchema = z.object({
   title: z.string().min(1),
   description: z.string().default(''),
 });
 
-const ActionItemSchema = z.object({
+export const ActionItemSchema = z.object({
   title: z.string().min(1),
   description: z.string().default(''),
 });
@@ -32,4 +32,9 @@ export const AnalysisSchema = z.object({
   action_items: z.array(ActionItemSchema).default([]),
 });
 
-export default { AnalysisSchema };
+/** @typedef {z.infer<typeof TaskSchema>} Task */
+/** @typedef {z.infer<typeof RiskSchema>} Risk */
+/** @typedef {z.infer<typeof DecisionSchema>} Decision */
+/** @typedef {z.infer<typeof AnalysisSchema>} Analysis */
+
+export default { AnalysisSchema, TaskSchema, RiskSchema, DecisionSchema };

@@ -3,14 +3,16 @@
 import { program } from 'commander';
 import { registerAnalyzeCommand } from './commands/analyze.js';
 import { registerBatchCommand } from './commands/batch.js';
+import { registerEvalCommand } from './commands/eval.js';
 
 program
   .name('teampulse')
   .description('CLI de analisis de reuniones con IA')
-  .version('1.0.1');
+  .version('1.1.0');
 
 registerAnalyzeCommand(program);
 registerBatchCommand(program);
+registerEvalCommand(program);
 
 program
   .command('mcp')
