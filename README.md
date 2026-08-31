@@ -12,6 +12,7 @@ AI-powered CLI for meeting analysis. Extract summaries, tasks, risks, and decisi
 - **Transcript normalization**: Support for `.srt` and `.vtt` formats from Zoom, Meet, Teams
 - **Batch processing**: Analyze multiple files with configurable concurrency
 - **Tests included**: 10+ unit tests for core utilities
+- **MCP Server**: Expose TeamPulse as a Model Context Protocol server for AI assistants
 
 ## Architecture Overview
 
@@ -29,50 +30,57 @@ flowchart TD
         F["concurrency control"]
     end
 
+    subgraph MCP["MCP Server"]
+        G["analyze_meeting tool"]
+        H["get_meeting_history tool"]
+    end
+
     subgraph Utils["Utility Layer"]
-        G["transcript.js<br/>normalize SRT/VTT"]
-        H["cache.js<br/>SHA-256 hash"]
-        I["memory.js<br/>atomic writes"]
-        J["parseJSON.js<br/>robust extraction"]
-        K["schema.js<br/>Zod validation"]
+        I["transcript.js<br/>normalize SRT/VTT"]
+        J["cache.js<br/>SHA-256 hash"]
+        K["memory.js<br/>atomic writes"]
+        L["parseJSON.js<br/>robust extraction"]
+        M["schema.js<br/>Zod validation"]
     end
 
     subgraph Provider["AI Provider Layer"]
-        L["provider.js<br/>timeouts, retries, fallback"]
-        M["Gemini"]
-        N["Ollama local"]
-        O["Anthropic"]
-        P["OpenAI"]
-        Q["Mistral"]
+        N["provider.js<br/>timeouts, retries, fallback"]
+        O["Gemini"]
+        P["Ollama local"]
+        Q["Anthropic"]
+        R["OpenAI"]
+        S["Mistral"]
     end
 
     subgraph Storage["Local Storage"]
-        R["~/.teampulse/cache/*.json"]
-        S["~/.teampulse/memory.json"]
+        T["~/.teampulse/cache/*.json"]
+        U["~/.teampulse/memory.json"]
     end
 
     subgraph Output["Output"]
-        T["Summary"]
-        U["Tasks"]
-        V["Risks"]
-        W["Decisions"]
+        V["Summary"]
+        W["Tasks"]
+        X["Risks"]
+        Y["Decisions"]
     end
 
     A & B & C --> D & E
     D & E --> F
-    F --> G
-    G --> H
-    H --> I
+    F --> I
+    G & H --> I
     I --> J
     J --> K
     K --> L
-    L --> M & N & O & P & Q
-    M & N & O & P & Q --> L
-    L --> R & S
-    L --> T & U & V & W
+    L --> M
+    M --> N
+    N --> O & P & Q & R & S
+    O & P & Q & R & S --> N
+    N --> T & U
+    N --> V & W & X & Y
 
     style Input fill:#e1f5ff
     style CLI fill:#fff4e1
+    style MCP fill:#e8f5e9
     style Utils fill:#f0f0f0
     style Provider fill:#e8f5e9
     style Storage fill:#fff9e1
@@ -81,7 +89,7 @@ flowchart TD
 
 ## Data Flow
 
-1. **Input**: User provides transcript file(s) via `analyze` or `batch` command
+1. **Input**: User provides transcript file(s) via `analyze` or `batch` command, or via MCP tool call
 2. **Normalization**: `.srt`/`.vtt` timestamps and metadata are stripped
 3. **Caching**: SHA-256 hash is computed; cache is checked first
 4. **Provider Call**: If not cached, request is sent to AI provider with timeout
@@ -129,7 +137,7 @@ export MISTRAL_MODEL="mistral-small-latest"
 
 ## Usage
 
-### Analyze a single transcript
+### CLI: Analyze a single transcript
 
 ```bash
 node src/index.js analyze meeting.txt
@@ -141,7 +149,7 @@ node src/index.js analyze meeting.txt --provider ollama
 node src/index.js analyze meeting.txt --provider gemini --fallback-provider ollama --fallback-model mistral
 ```
 
-### Analyze multiple transcripts (batch)
+### CLI: Analyze multiple transcripts (batch)
 
 ```bash
 node src/index.js batch ./meetings
@@ -151,6 +159,94 @@ node src/index.js batch ./meetings --concurrency 3
 
 # With fallback
 node src/index.js batch ./meetings --provider gemini --fallback-provider ollama
+```
+
+### MCP Server: Run as stdio server
+
+```bash
+# Run MCP server
+npm run mcp-server
+
+# Or directly
+node src/mcp-server.js
+```
+
+### MCP Server: Configure Claude Desktop
+
+Add to your Claude Desktop configuration (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "teampulse": {
+      "command": "node",
+      "args": ["/path/to/teampulse/src/mcp-server.js"],
+      "env": {
+        "GEMINI_API_KEY": "your-api-key",
+        "ANTHROPIC_API_KEY": "your-claude-api-key"
+      }
+    }
+  }
+}
+```
+
+### MCP Server: Available Tools
+
+#### `analyze_meeting`
+
+Analyze a meeting transcript and extract structured information.
+
+**Parameters:**
+- `transcript` (required): Meeting transcript text
+- `format` (optional): `txt`, `srt`, or `vtt` (auto-detected if not specified)
+- `provider` (optional): AI provider (`gemini`, `ollama`, `anthropic`, `openai`, `mistral`)
+- `fallbackProvider` (optional): Fallback provider if primary fails
+- `useCache` (optional): Use local cache if available (default: `true`)
+
+**Example (via MCP client):**
+
+```json
+{
+  "tool": "analyze_meeting",
+  "arguments": {
+    "transcript": "00:00:01,000 --> 00:00:04,000\nWelcome to the team sync...",
+    "format": "srt",
+    "provider": "gemini",
+    "fallbackProvider": "ollama"
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "summary": "Team sync to discuss Q3 roadmap and blockers.",
+  "tasks": [
+    {"title": "Fix production bug", "priority": "high", "owner": "alice"},
+    {"title": "Update documentation", "priority": "medium", "owner": "bob"}
+  ],
+  "risks": [{"title": "Dependency delay from vendor"}],
+  "decisions": [{"title": "Adopt new CI/CD pipeline"}]
+}
+```
+
+#### `get_meeting_history`
+
+Retrieve history of analyzed meetings from local memory.
+
+**Parameters:**
+- `limit` (optional): Maximum number of meetings to return (default: 10)
+
+**Example:**
+
+```json
+{
+  "tool": "get_meeting_history",
+  "arguments": {
+    "limit": 5
+  }
+}
 ```
 
 ### Supported transcript formats
@@ -197,6 +293,7 @@ Decisiones:
 - `src/utils/cache.js` - SHA-256 content-based caching
 - `src/commands/analyze.js` - Single file analysis
 - `src/commands/batch.js` - Batch processing with concurrency control
+- `src/mcp-server.js` - MCP server exposing TeamPulse tools
 
 ## Error Handling
 
