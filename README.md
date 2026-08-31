@@ -1,5 +1,5 @@
 # TeamPulse
-
+[![npm version](https://badge.fury.io/js/teampulse.svg)](https://www.npmjs.com/package/teampulse)
 AI-powered CLI for meeting analysis. Extract summaries, tasks, risks, and decisions from transcripts (`.txt`, `.srt`, `.vtt`) using LLM providers like Gemini, Ollama, Anthropic, OpenAI, and Mistral.
 
 ## Features
