@@ -11,7 +11,7 @@ AI-powered CLI for meeting analysis. Extract summaries, tasks, risks, and decisi
 - **Atomic memory**: Safe writes to prevent corruption on interruptions
 - **Transcript normalization**: Support for `.srt` and `.vtt` formats from Zoom, Meet, Teams
 - **Batch processing**: Analyze multiple files with configurable concurrency
-- **Tests included**: 10+ unit tests for core utilities
+- **Tests included**: 3 test files covering parseJSON, transcript, and cache
 - **MCP Server**: Expose TeamPulse as a Model Context Protocol server for AI assistants
 
 ## Architecture Overview
@@ -102,13 +102,19 @@ flowchart TD
 ## Installation
 
 ```bash
-# Clone the repository
+npx teampulse analyze meeting.txt
+npm i -g teampulse
+```
+
+From source:
+
+```bash
 git clone https://github.com/mcontrerasmalpar-pixel/teampulse.git
 cd teampulse
-
-# Install dependencies
 npm install
 ```
+
+Requires Node.js 18 or later.
 
 ## Configuration
 
@@ -140,35 +146,33 @@ export MISTRAL_MODEL="mistral-small-latest"
 ### CLI: Analyze a single transcript
 
 ```bash
-node src/index.js analyze meeting.txt
+teampulse analyze meeting.txt
 
 # With custom provider
-node src/index.js analyze meeting.txt --provider ollama
+teampulse analyze meeting.txt --provider ollama
 
 # With fallback provider
-node src/index.js analyze meeting.txt --provider gemini --fallback-provider ollama --fallback-model mistral
+teampulse analyze meeting.txt --provider gemini --fallback-provider ollama --fallback-model mistral
 ```
 
 ### CLI: Analyze multiple transcripts (batch)
 
 ```bash
-node src/index.js batch ./meetings
+teampulse batch ./meetings
 
 # With custom concurrency
-node src/index.js batch ./meetings --concurrency 3
+teampulse batch ./meetings --concurrency 3
 
 # With fallback
-node src/index.js batch ./meetings --provider gemini --fallback-provider ollama
+teampulse batch ./meetings --provider gemini --fallback-provider ollama
 ```
 
 ### MCP Server: Run as stdio server
 
 ```bash
-# Run MCP server
-npm run mcp-server
-
-# Or directly
-node src/mcp-server.js
+npx teampulse mcp
+# or
+npx teampulse-mcp
 ```
 
 ### MCP Server: Configure Claude Desktop
@@ -179,11 +183,27 @@ Add to your Claude Desktop configuration (`claude_desktop_config.json`):
 {
   "mcpServers": {
     "teampulse": {
-      "command": "node",
-      "args": ["/path/to/teampulse/src/mcp-server.js"],
+      "command": "npx",
+      "args": ["-y", "teampulse", "mcp"],
       "env": {
         "GEMINI_API_KEY": "your-api-key",
         "ANTHROPIC_API_KEY": "your-claude-api-key"
+      }
+    }
+  }
+}
+```
+
+Equivalent using the dedicated bin:
+
+```json
+{
+  "mcpServers": {
+    "teampulse": {
+      "command": "npx",
+      "args": ["-y", "teampulse-mcp"],
+      "env": {
+        "GEMINI_API_KEY": "your-api-key"
       }
     }
   }
@@ -314,6 +334,8 @@ npm test
 # - transcript: SRT/VTT timestamp removal
 # - cache: SHA-256 hash consistency
 ```
+
+There are 3 test files: `test/parseJSON.test.js`, `test/transcript.test.js`, and `test/cache.test.js`.
 
 ## Data Storage
 

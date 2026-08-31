@@ -1,23 +1,23 @@
+#!/usr/bin/env node
 // @ts-check
 import { program } from 'commander';
 import { registerAnalyzeCommand } from './commands/analyze.js';
 import { registerBatchCommand } from './commands/batch.js';
 
-// Importa otros comandos existentes (asumiendo que exportan funciones de registro similares)
-// Si los comandos existentes no tienen registerXxx, se pueden importar y registrar manualmente.
-
 program
   .name('teampulse')
   .description('CLI de analisis de reuniones con IA')
-  .version('1.0.0');
+  .version('1.0.1');
 
-// Registra comandos con las nuevas utilidades
 registerAnalyzeCommand(program);
 registerBatchCommand(program);
 
-// Aquí se registrarí¬¬an los demá¬¬s comandos si ya exportan funciones de registro:
-// import { registerChatCommand } from './commands/chat.js';
-// registerChatCommand(program);
+program
+  .command('mcp')
+  .description('Start the TeamPulse MCP server on stdio')
+  .action(async () => {
+    await import('./mcp-server.js');
+  });
 
 program.parse();
 

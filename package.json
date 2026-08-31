@@ -1,20 +1,41 @@
 {
   "name": "teampulse",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered CLI for meeting analysis",
-  "main": "src/index.js",
-  "bin": {
-    "teampulse": "./src/index.js"
-  },
   "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./mcp": "./src/mcp-server.js"
+  },
+  "bin": {
+    "teampulse": "./src/index.js",
+    "teampulse-mcp": "./src/mcp-server.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test",
     "mcp-server": "node src/mcp-server.js"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": ["cli", "ai", "meetings", "mcp"],
-  "author": "",
+  "author": "Maria Del Carmen Contreras",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mcontrerasmalpar-pixel/teampulse.git"
+  },
+  "homepage": "https://github.com/mcontrerasmalpar-pixel/teampulse#readme",
+  "bugs": {
+    "url": "https://github.com/mcontrerasmalpar-pixel/teampulse/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "commander": "^12.1.0",

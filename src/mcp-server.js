@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // @ts-check
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -13,7 +14,7 @@ import { AnalysisSchema } from './utils/schema.js';
 
 /**
  * TeamPulse MCP Server
- * 
+ *
  * Exposes meeting analysis capabilities via Model Context Protocol.
  * Reuses existing modules: provider, schema, memory, cache, transcript.
  */
@@ -21,7 +22,7 @@ import { AnalysisSchema } from './utils/schema.js';
 const server = new Server(
   {
     name: 'teampulse',
-    version: '1.0.0',
+    version: '1.0.1',
   },
   {
     capabilities: {
