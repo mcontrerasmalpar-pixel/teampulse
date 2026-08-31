@@ -13,6 +13,84 @@ AI-powered CLI for meeting analysis. Extract summaries, tasks, risks, and decisi
 - **Batch processing**: Analyze multiple files with configurable concurrency
 - **Tests included**: 10+ unit tests for core utilities
 
+## Architecture Overview
+
+```mermaid
+flowchart TD
+    subgraph Input["Input Layer"]
+        A[".txt transcript"]
+        B[".srt subtitles"]
+        C[".vtt captions"]
+    end
+
+    subgraph CLI["TeamPulse CLI"]
+        D["analyze command"]
+        E["batch command"]
+        F["concurrency control"]
+    end
+
+    subgraph Utils["Utility Layer"]
+        G["transcript.js<br/>normalize SRT/VTT"]
+        H["cache.js<br/>SHA-256 hash"]
+        I["memory.js<br/>atomic writes"]
+        J["parseJSON.js<br/>robust extraction"]
+        K["schema.js<br/>Zod validation"]
+    end
+
+    subgraph Provider["AI Provider Layer"]
+        L["provider.js<br/>timeouts, retries, fallback"]
+        M["Gemini"]
+        N["Ollama local"]
+        O["Anthropic"]
+        P["OpenAI"]
+        Q["Mistral"]
+    end
+
+    subgraph Storage["Local Storage"]
+        R["~/.teampulse/cache/*.json"]
+        S["~/.teampulse/memory.json"]
+    end
+
+    subgraph Output["Output"]
+        T["Summary"]
+        U["Tasks"]
+        V["Risks"]
+        W["Decisions"]
+    end
+
+    A & B & C --> D & E
+    D & E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+    L --> M & N & O & P & Q
+    M & N & O & P & Q --> L
+    L --> R & S
+    L --> T & U & V & W
+
+    style Input fill:#e1f5ff
+    style CLI fill:#fff4e1
+    style Utils fill:#f0f0f0
+    style Provider fill:#e8f5e9
+    style Storage fill:#fff9e1
+    style Output fill:#f3e5f5
+```
+
+## Data Flow
+
+1. **Input**: User provides transcript file(s) via `analyze` or `batch` command
+2. **Normalization**: `.srt`/`.vtt` timestamps and metadata are stripped
+3. **Caching**: SHA-256 hash is computed; cache is checked first
+4. **Provider Call**: If not cached, request is sent to AI provider with timeout
+5. **Error Handling**: HTTP errors are classified (401, 429, 5xx) and handled appropriately
+6. **Fallback**: If primary provider fails after retries, secondary provider is used
+7. **Validation**: Response is parsed and validated against Zod schema
+8. **Storage**: Result is cached and meeting is recorded in memory
+9. **Output**: Structured summary, tasks, risks, and decisions are displayed
+
 ## Installation
 
 ```bash
@@ -109,9 +187,7 @@ Decisiones:
 ✅ Adopt new CI/CD pipeline
 ```
 
-## Architecture
-
-### Core modules
+## Core Modules
 
 - `src/services/provider.js` - AI provider abstraction with timeouts, retries, fallback
 - `src/utils/memory.js` - Atomic writes to `~/.teampulse/memory.json`
@@ -122,7 +198,7 @@ Decisiones:
 - `src/commands/analyze.js` - Single file analysis
 - `src/commands/batch.js` - Batch processing with concurrency control
 
-### Error handling
+## Error Handling
 
 - **401/403**: Invalid or expired API key (non-retryable)
 - **429**: Rate limit exceeded (respects `Retry-After` header)
@@ -142,7 +218,7 @@ npm test
 # - cache: SHA-256 hash consistency
 ```
 
-## Data storage
+## Data Storage
 
 - **Memory**: `~/.teampulse/memory.json` (versioned, atomic writes)
 - **Cache**: `~/.teampulse/cache/*.json` (SHA-256 keyed, atomic writes)
