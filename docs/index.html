@@ -63,7 +63,7 @@
 </head>
 <body>
     <nav><div class="container"><a href="#" class="logo">TeamPulse</a><div class="nav-links"><a href="#features">Features</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse#readme" target="_blank">Docs</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">GitHub</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary">Get Started</a></div></div></nav>
-    <section class="hero"><div class="container"><h1>AI-powered meeting<br><span>analysis for teams</span></h1><p>Extract summaries, tasks, risks, and decisions from your meeting transcripts automatically. Supports Zoom, Meet, Teams exports.</p><div class="hero-cta"><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary btn-large">Start for free</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-secondary btn-large">View on GitHub</a></div></div></section>
+    <section class="hero"><div class="container"><h1><span class="scramble-text">AI-powered meeting</span><br><span class="scramble-text-gradient">analysis for teams</span></h1><p>Extract summaries, tasks, risks, and decisions from your meeting transcripts automatically. Supports Zoom, Meet, Teams exports.</p><div class="hero-cta"><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary btn-large">Start for free</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-secondary btn-large">View on GitHub</a></div></div></section>
     <section class="terminal-section"><div class="container"><div class="terminal-window"><div class="terminal-header"><div class="terminal-dots"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div></div></div><div class="terminal-body"><div class="command"><div class="command-code"><span class="prompt">$</span>npm install -g teampulse</div><button class="copy-btn" onclick="copyToClipboard('npm install -g teampulse')">Copy</button></div><div class="command"><div class="command-code"><span class="prompt">$</span>npx teampulse analyze meeting.vtt</div><button class="copy-btn" onclick="copyToClipboard('npx teampulse analyze meeting.vtt')">Copy</button></div><div class="command"><div class="command-code"><span class="prompt">$</span>teampulse analyze meeting.txt</div><button class="copy-btn" onclick="copyToClipboard('teampulse analyze meeting.txt')">Copy</button></div><div class="output"><span class="success">✓</span> Analysis complete<br><br><span class="success">Summary:</span> Team sync to discuss Q3 roadmap and blockers.<br><br><span class="task-high">●</span> Fix production bug (@alice)<br><span class="task-medium">●</span> Update documentation (@bob)<br><span class="task-low">●</span> Schedule follow-up meeting<br><br><span class="success">●</span> Adopt new CI/CD pipeline</div></div></div></div></section>
     <section class="mcp-section"><div class="container"><h2>Integrate with AI assistants</h2><p>Use TeamPulse directly in Claude Desktop and other MCP-compatible clients</p><div class="mcp-config"><div class="mcp-config-header"><span class="mcp-config-title">claude_desktop_config.json</span><button class="copy-btn" onclick="copyToClipboard(JSON.stringify({mcpServers:{teampulse:{command:'npx',args:['-y','teampulse','mcp-server'],env:{GEMINI_API_KEY:'your-gemini-api-key',ANTHROPIC_API_KEY:'your-claude-api-key-optional'}}}},null,2))">Copy</button></div><div class="mcp-config-body"><pre>{
   "mcpServers": {
@@ -80,6 +80,41 @@
     <section class="features" id="features"><div class="container"><h2>Everything you need</h2><p>Powerful features built for modern teams</p><div class="features-grid"><div class="feature-card"><div class="feature-icon">🤖</div><h3>Multiple AI providers</h3><p>Gemini, Ollama, Anthropic, OpenAI, Mistral. Choose your preferred provider or use fallback.</p></div><div class="feature-card"><div class="feature-icon">⚡</div><h3>Lightning fast</h3><p>Local caching with SHA-256 hashing means you never pay for the same analysis twice.</p></div><div class="feature-card"><div class="feature-icon">🔒</div><h3>Atomic writes</h3><p>Safe memory writes prevent corruption. Your data is always consistent.</p></div><div class="feature-card"><div class="feature-icon">📝</div><h3>Any format</h3><p>.txt, .srt, .vtt - we handle Zoom, Meet, Teams exports automatically.</p></div><div class="feature-card"><div class="feature-icon">🔄</div><h3>Fallback support</h3><p>Primary provider down? Automatically switch to secondary without interruption.</p></div><div class="feature-card"><div class="feature-icon">🔧</div><h3>MCP Server</h3><p>Integrate with AI assistants via Model Context Protocol for seamless workflows.</p></div></div></div></section>
     <section class="cta-section"><div class="container"><h2>Ready to analyze your meetings?</h2><p>Join teams using TeamPulse for smarter meeting analysis</p><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" class="btn-primary btn-large">Get started for free</a></div></section>
     <footer><div class="container"><div class="footer-content"><div class="footer-left">&copy; 2026 TeamPulse. Open source.</div><div class="footer-links"><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">GitHub</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse#readme" target="_blank">Docs</a><a href="https://github.com/mcontrerasmalpar-pixel/teampulse" target="_blank">Twitter</a></div></div></div></footer>
-    <script>function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => console.log('Copied to clipboard')).catch(err => console.error('Failed to copy:', err)); }</script>
+    <script>
+        function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => console.log('Copied to clipboard')).catch(err => console.error('Failed to copy:', err)); }
+        
+        // Scramble text effect
+        class ScrambleText {
+            constructor(element, text) {
+                this.element = element;
+                this.text = text;
+                this.chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+                this.scramble();
+            }
+            
+            scramble() {
+                let iterations = 0;
+                const interval = setInterval(() => {
+                    this.element.innerText = this.text.split('').map((char, index) => {
+                        if (index < iterations) return this.text[index];
+                        return this.chars[Math.floor(Math.random() * this.chars.length)];
+                    }).join('');
+                    
+                    if (iterations >= this.text.length) clearInterval(interval);
+                    iterations += 1/3;
+                }, 30);
+            }
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const scrambleElements = document.querySelectorAll('.scramble-text, .scramble-text-gradient');
+            scrambleElements.forEach(el => {
+                const text = el.innerText;
+                el.innerText = '';
+                new ScrambleText(el, text);
+            });
+        });
+    </script>
 </body>
 </html>
