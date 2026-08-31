@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "teampulse": {
+      "command": "npx",
+      "args": ["-y", "teampulse-mcp"],
+      "env": {
+        "GEMINI_API_KEY": "${env:GEMINI_API_KEY}",
+        "ANTHROPIC_API_KEY": "${env:ANTHROPIC_API_KEY}",
+        "OPENAI_API_KEY": "${env:OPENAI_API_KEY}",
+        "MISTRAL_API_KEY": "${env:MISTRAL_API_KEY}",
+        "OLLAMA_BASE_URL": "${env:OLLAMA_BASE_URL}"
+      }
+    }
+  }
+}
