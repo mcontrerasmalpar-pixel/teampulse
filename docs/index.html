@@ -18,7 +18,9 @@
         .nav-links { display: flex; gap: 32px; align-items: center; }
         .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
         .nav-links a:hover { color: var(--text-primary); }
-        .btn-primary { background: var(--text-primary); color: var(--bg-primary); padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; transition: transform 0.2s; display: inline-block; }
+        .btn-primary { background: var(--text-primary); color: #ffffff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; transition: transform 0.2s; display: inline-block; }
+        .nav-links a.btn-primary { color: #ffffff; }
+        .nav-links a.btn-primary:hover { color: #ffffff; }
         .btn-primary:hover { transform: translateY(-2px); }
         .hero { padding: 160px 0 100px; text-align: center; position: relative; }
         .hero::before { content: ''; position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 600px; height: 600px; background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%); pointer-events: none; }
